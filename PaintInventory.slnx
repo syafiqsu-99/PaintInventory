@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="paintinventory.client/paintinventory.client.esproj">
+    <Build />
+    <Deploy />
+  </Project>
+  <Project Path="PaintInventory.Server/PaintInventory.Server.csproj" />
+</Solution>
