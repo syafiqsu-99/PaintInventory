@@ -3,10 +3,10 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace PaintInventory.Server.Data.Migrations
+namespace PaintInventory.Server.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class PaintInventory1 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -39,10 +39,12 @@ namespace PaintInventory.Server.Data.Migrations
                     SKU = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Name = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     ColorCode = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Volume = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    Volume = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: true),
                     Unit = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Batch = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Manufacturer = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    OnHand = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    ReorderLevel = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
@@ -59,7 +61,7 @@ namespace PaintInventory.Server.Data.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     PaintItemId = table.Column<int>(type: "int", nullable: false),
                     Location = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    QuantityMoved = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    QuantityMoved = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
                     Notes = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Timestamp = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
@@ -83,7 +85,7 @@ namespace PaintInventory.Server.Data.Migrations
                     PaintItemId = table.Column<int>(type: "int", nullable: true),
                     BarcodeScanned = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Action = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Quantity = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Quantity = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
                     Unit = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     DeviceId = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Operator = table.Column<string>(type: "nvarchar(max)", nullable: true),
@@ -117,6 +119,11 @@ namespace PaintInventory.Server.Data.Migrations
                 name: "IX_ScanRecords_PaintItemId",
                 table: "ScanRecords",
                 column: "PaintItemId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ScanRecords_Timestamp",
+                table: "ScanRecords",
+                column: "Timestamp");
         }
 
         /// <inheritdoc />

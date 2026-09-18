@@ -9,5 +9,5 @@ public class AuditLog
     public string Action { get; set; } = string.Empty;
     public string? ChangedBy { get; set; }
     public DateTime ChangedAt { get; set; } = DateTime.UtcNow;
-    public string? Details { get; set; } // JSON payload of change
+    public string? Details { get; set; }
 }

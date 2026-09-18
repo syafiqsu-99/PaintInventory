@@ -1,5 +1,3 @@
-using System.ComponentModel.DataAnnotations;
-
 namespace PaintInventory.Server.Models;
 
 public class LocationHistory

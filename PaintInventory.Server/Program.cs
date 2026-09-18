@@ -1,62 +1,43 @@
 using Microsoft.EntityFrameworkCore;
 using PaintInventory.Server.Data;
+using PaintInventory.Server.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
 builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-
-var configuration = builder.Configuration;
-var connectionString = configuration.GetConnectionString("DefaultConnection")
-    ?? "Server=(localdb)\\MSSQLLocalDB;Database=PaintInventoryDb;Trusted_Connection=True;MultipleActiveResultSets=true";
+builder.Services.AddOpenApi();
 
 builder.Services.AddDbContext<PaintInventoryDbContext>(options =>
-{
-    options.UseSqlServer(connectionString);
-});
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowAll", p => p.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
-});
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
 
 var app = builder.Build();
 
-// Ensure database created and seed data
+app.UseExceptionHandler();
+
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<PaintInventoryDbContext>();
-    db.Database.Migrate();
-
-    // Seed if empty
-    if (!db.PaintItems.Any())
-    {
-        db.PaintItems.Add(new PaintInventory.Server.Models.PaintItem { Barcode = "7029350108807", SKU = "J001", Name = "Sample Red Paint", ColorCode = "R-100", Volume = 1.0m, Unit = "L", Manufacturer = "Acme" });
-        db.PaintItems.Add(new PaintInventory.Server.Models.PaintItem { Barcode = "3372689-1-+-1:2", SKU = "J002", Name = "Sample White Paint", ColorCode = "W-200", Volume = 0.5m, Unit = "L", Manufacturer = "Acme" });
-        db.SaveChanges();
-    }
+    await db.Database.MigrateAsync();
 }
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    app.MapOpenApi();
+}
+else
+{
+    app.UseHsts();
 }
 
 app.UseHttpsRedirection();
 
-app.UseCors("AllowAll");
-
-app.UseAuthorization();
+app.UseDefaultFiles();
+app.UseStaticFiles();
 
 app.MapControllers();
-
-app.UseDefaultFiles();
-app.MapStaticAssets();
-
 app.MapFallbackToFile("/index.html");
 
 app.Run();

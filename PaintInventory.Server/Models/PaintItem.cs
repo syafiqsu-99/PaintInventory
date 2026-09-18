@@ -17,10 +17,12 @@ public class PaintItem
     public string? Batch { get; set; }
     public string? Manufacturer { get; set; }
 
+    public decimal OnHand { get; set; }
+    public decimal? ReorderLevel { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
 
-    // Navigation
     public List<ScanRecord> ScanRecords { get; set; } = new();
     public List<LocationHistory> LocationHistories { get; set; } = new();
 }

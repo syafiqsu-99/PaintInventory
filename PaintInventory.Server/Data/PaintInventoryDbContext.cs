@@ -3,12 +3,9 @@ using PaintInventory.Server.Models;
 
 namespace PaintInventory.Server.Data;
 
-public class PaintInventoryDbContext : DbContext
+public class PaintInventoryDbContext(DbContextOptions<PaintInventoryDbContext> options)
+    : DbContext(options)
 {
-    public PaintInventoryDbContext(DbContextOptions<PaintInventoryDbContext> options) : base(options)
-    {
-    }
-
     public DbSet<PaintItem> PaintItems => Set<PaintItem>();
     public DbSet<ScanRecord> ScanRecords => Set<ScanRecord>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
@@ -20,14 +17,24 @@ public class PaintInventoryDbContext : DbContext
             .HasIndex(p => p.Barcode)
             .IsUnique();
 
-        // Decimal precision to avoid truncation issues
         modelBuilder.Entity<PaintItem>()
             .Property(p => p.Volume)
+            .HasPrecision(18, 2);
+
+        modelBuilder.Entity<PaintItem>()
+            .Property(p => p.OnHand)
+            .HasPrecision(18, 2);
+
+        modelBuilder.Entity<PaintItem>()
+            .Property(p => p.ReorderLevel)
             .HasPrecision(18, 2);
 
         modelBuilder.Entity<ScanRecord>()
             .Property(s => s.Quantity)
             .HasPrecision(18, 2);
+
+        modelBuilder.Entity<ScanRecord>()
+            .HasIndex(s => s.Timestamp);
 
         modelBuilder.Entity<LocationHistory>()
             .Property(l => l.QuantityMoved)

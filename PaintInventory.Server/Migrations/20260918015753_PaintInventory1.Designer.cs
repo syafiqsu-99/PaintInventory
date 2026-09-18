@@ -3,21 +3,24 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PaintInventory.Server.Data;
 
 #nullable disable
 
-namespace PaintInventory.Server.Data.Migrations
+namespace PaintInventory.Server.Migrations
 {
     [DbContext(typeof(PaintInventoryDbContext))]
-    partial class PaintInventoryDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260918015753_PaintInventory1")]
+    partial class PaintInventory1
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.0")
+                .HasAnnotation("ProductVersion", "10.0.0")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -74,6 +77,7 @@ namespace PaintInventory.Server.Data.Migrations
                         .HasColumnType("int");
 
                     b.Property<decimal>("QuantityMoved")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("Timestamp")
@@ -113,6 +117,14 @@ namespace PaintInventory.Server.Data.Migrations
                     b.Property<string>("Name")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<decimal>("OnHand")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("ReorderLevel")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<string>("SKU")
                         .HasColumnType("nvarchar(max)");
 
@@ -123,6 +135,7 @@ namespace PaintInventory.Server.Data.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<decimal?>("Volume")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.HasKey("Id");
@@ -165,6 +178,7 @@ namespace PaintInventory.Server.Data.Migrations
                         .HasColumnType("int");
 
                     b.Property<decimal>("Quantity")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("Timestamp")
@@ -176,6 +190,8 @@ namespace PaintInventory.Server.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("PaintItemId");
+
+                    b.HasIndex("Timestamp");
 
                     b.ToTable("ScanRecords");
                 });

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PaintInventory.Server.Data;
@@ -7,61 +8,84 @@ namespace PaintInventory.Server.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class ScanController : ControllerBase
+public sealed class ScanController(PaintInventoryDbContext db) : ControllerBase
 {
-    private readonly PaintInventoryDbContext _db;
-
-    public ScanController(PaintInventoryDbContext db)
-    {
-        _db = db;
-    }
+    private static readonly string[] AllowedActions = ["Use", "Receive", "Adjust"];
 
     [HttpPost]
-    public async Task<IActionResult> RecordScan([FromBody] ScanRecord dto)
+    public async Task<ActionResult<ScanResult>> RecordScan(ScanRequest req, CancellationToken ct)
     {
-        if (dto == null || string.IsNullOrWhiteSpace(dto.BarcodeScanned))
-            return BadRequest("Invalid scan payload");
+        var action = req.Action?.Trim();
+        if (action is null || !AllowedActions.Contains(action))
+            return BadRequest(new { error = "Action must be Use, Receive, or Adjust." });
+        if (req.Quantity < 0)
+            return BadRequest(new { error = "Quantity cannot be negative." });
 
-        // Try to find referenced paint item
-        var paint = await _db.PaintItems.FirstOrDefaultAsync(p => p.Barcode == dto.BarcodeScanned);
-        if (paint != null)
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+
+        var item = await db.PaintItems.FirstOrDefaultAsync(p => p.Barcode == req.Barcode, ct);
+        if (item is null)
+            return NotFound(new { error = $"No paint item registered for barcode '{req.Barcode}'. Register it first." });
+
+        var delta = action switch
         {
-            dto.PaintItemId = paint.Id;
-        }
-
-        dto.Timestamp = DateTime.UtcNow;
-        _db.ScanRecords.Add(dto);
-
-        // If the action implies movement to a location, record location history
-        if (!string.IsNullOrWhiteSpace(dto.Location) && dto.Quantity != 0)
-        {
-            var loc = new LocationHistory
-            {
-                PaintItemId = dto.PaintItemId ?? 0,
-                Location = dto.Location,
-                QuantityMoved = dto.Quantity,
-                Timestamp = dto.Timestamp,
-                Notes = dto.Notes
-            };
-
-            // Only add if we have a PaintItemId
-            if (dto.PaintItemId != null)
-                _db.LocationHistories.Add(loc);
-        }
-
-        // Add simple audit log
-        var audit = new AuditLog
-        {
-            Entity = "ScanRecord",
-            EntityId = dto.Id.ToString(),
-            Action = dto.Action,
-            ChangedAt = DateTime.UtcNow,
-            Details = System.Text.Json.JsonSerializer.Serialize(dto)
+            "Receive" => req.Quantity,
+            "Use" => -req.Quantity,
+            "Adjust" => req.Quantity - item.OnHand,
+            _ => 0m
         };
-        _db.AuditLogs.Add(audit);
 
-        await _db.SaveChangesAsync();
+        var now = DateTime.UtcNow;
+        item.OnHand += delta;
+        item.UpdatedAt = now;
 
-        return Ok(dto);
+        var scan = new ScanRecord
+        {
+            PaintItemId = item.Id,
+            BarcodeScanned = req.Barcode,
+            Action = action,
+            Quantity = req.Quantity,
+            Unit = req.Unit ?? item.Unit,
+            DeviceId = req.DeviceId,
+            Operator = req.Operator,
+            Location = req.Location,
+            Notes = req.Notes,
+            Timestamp = now
+        };
+        db.ScanRecords.Add(scan);
+
+        if (!string.IsNullOrWhiteSpace(req.Location) && delta != 0)
+        {
+            db.LocationHistories.Add(new LocationHistory
+            {
+                PaintItemId = item.Id,
+                Location = req.Location!,
+                QuantityMoved = delta,
+                Notes = req.Notes,
+                Timestamp = now
+            });
+        }
+
+        db.AuditLogs.Add(new AuditLog
+        {
+            Entity = nameof(ScanRecord),
+            Action = action,
+            ChangedBy = req.Operator,
+            ChangedAt = now,
+            Details = JsonSerializer.Serialize(new
+            {
+                req.Barcode,
+                action,
+                req.Quantity,
+                delta,
+                newOnHand = item.OnHand
+            })
+        });
+
+        await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+
+        var isLow = item.ReorderLevel.HasValue && item.OnHand <= item.ReorderLevel.Value;
+        return Ok(new ScanResult(scan.Id, item.Id, item.Barcode, action, delta, item.OnHand, isLow, now));
     }
 }

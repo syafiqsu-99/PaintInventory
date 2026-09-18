@@ -1,13 +1,12 @@
 <script setup>
-import Scan from './pages/Scan.vue'
+import AppBar from '@/components/AppBar.vue'
 </script>
 
 <template>
-  <main>
-    <Scan />
-  </main>
+  <v-app>
+    <AppBar />
+    <v-main>
+      <router-view />
+    </v-main>
+  </v-app>
 </template>
-
-<style scoped>
-main { padding: 0.5rem }
-</style>
