@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PaintInventory.Server.Data;
 
@@ -11,9 +12,11 @@ using PaintInventory.Server.Data;
 namespace PaintInventory.Server.Migrations
 {
     [DbContext(typeof(PaintInventoryDbContext))]
-    partial class PaintInventoryDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260921065548_PaintInventory2")]
+    partial class PaintInventory2
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

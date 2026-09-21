@@ -2,78 +2,152 @@
 
 namespace PaintInventory.Server.Models;
 
-public record PaintItemRequest(
-    [property: Required] string Barcode,
-    string? Sku,
-    string? Name,
-    string? ColorCode,
-    decimal? Volume,
+public record ProductRequest(
+    [property: Required] string Gtin,
+    string? ItemCode,
+    [property: Required] string ProductName,
+    string? Description,
+    ComponentType Component,
+    decimal? PackVolume,
     string? Unit,
-    string? Batch,
+    string? DefaultShade,
+    string? RalCode,
     string? Manufacturer,
-    decimal? ReorderLevel);
+    string? MixRatio,
+    int? PartnerProductId,
+    string? UnNumber,
+    string? HazardFlags,
+    bool TracksExpiry);
 
-public record PaintItemDto(
+public record ProductDto(
     int Id,
-    string Barcode,
-    string? Sku,
-    string? Name,
-    string? ColorCode,
-    decimal? Volume,
+    string Gtin,
+    string? ItemCode,
+    string ProductName,
+    string? Description,
+    ComponentType Component,
+    decimal? PackVolume,
     string? Unit,
-    string? Batch,
+    string? DefaultShade,
+    string? RalCode,
     string? Manufacturer,
-    decimal OnHand,
-    decimal? ReorderLevel,
-    bool IsLowStock,
+    string? MixRatio,
+    int? PartnerProductId,
+    string? PartnerProductName,
+    string? UnNumber,
+    string? HazardFlags,
+    bool TracksExpiry,
+    bool IsActive,
     DateTime CreatedAt,
     DateTime? UpdatedAt);
 
-public record ScanRequest(
-    [property: Required] string Barcode,
-    [property: Required] string Action,
+public record VendorRequest(
+    [property: Required] string Name,
+    bool IsOwnCompany,
+    bool StoresStock,
+    bool DoesBlasting,
+    bool DoesPainting);
+
+public record VendorDto(
+    int Id,
+    string Name,
+    bool IsOwnCompany,
+    bool StoresStock,
+    bool DoesBlasting,
+    bool DoesPainting,
+    bool IsActive,
+    DateTime CreatedAt);
+
+public record StockInRequest(
+    [property: Required] int ProductId,
+    [property: Required] int VendorId,
     decimal Quantity,
-    string? Unit,
-    string? Location,
-    string? Notes,
+    string? Batch,
+    string? Shade,
+    decimal? PackVolume,
+    DateTime? ManufacturingDate,
+    DateTime? BestBefore,
+    string? Source,
     string? Operator,
+    string? Notes,
     string? DeviceId);
 
-public record ScanResult(
-    int ScanId,
-    int PaintItemId,
-    string Barcode,
-    string Action,
+public record StockOutRequest(
+    [property: Required] int ProductId,
+    [property: Required] int VendorId,
+    decimal Quantity,
+    string? Batch,
+    string? Shade,
+    int? CoatLineId,
+    string? Operator,
+    string? Notes,
+    string? DeviceId);
+
+public record StockAdjustRequest(
+    [property: Required] int ProductId,
+    [property: Required] int VendorId,
+    decimal NewOnHandQty,
+    string? Operator,
+    string? Notes);
+
+public record StockTransferRequest(
+    [property: Required] int ProductId,
+    [property: Required] int FromVendorId,
+    [property: Required] int ToVendorId,
+    decimal Quantity,
+    string? Batch,
+    string? Operator,
+    string? Notes);
+
+public record StockResult(
+    int TransactionId,
+    int ProductId,
+    string Gtin,
+    int VendorId,
+    string VendorName,
+    StockDirection Direction,
     decimal QuantityApplied,
-    decimal OnHand,
+    decimal OnHandQty,
     bool IsLowStock,
     DateTime Timestamp);
 
-public record InventoryItemDto(
-    int Id,
-    string Barcode,
-    string? Name,
-    string? ColorCode,
+public record TransferResult(StockResult From, StockResult To);
+
+public record InventoryLevelDto(
+    int BalanceId,
+    int ProductId,
+    string Gtin,
+    string ProductName,
+    ComponentType Component,
+    string? Shade,
     string? Unit,
-    decimal OnHand,
+    int VendorId,
+    string VendorName,
+    decimal OnHandQty,
     decimal? ReorderLevel,
     bool IsLowStock,
     DateTime? UpdatedAt);
 
-public record ScanHistoryDto(
+public record StockHistoryDto(
     int Id,
-    string Action,
+    StockDirection Direction,
     decimal Quantity,
-    string? Unit,
-    string? Location,
+    string? Batch,
+    string VendorName,
+    string? CounterpartyVendorName,
     string? Operator,
     string? Notes,
     DateTime Timestamp);
+
+public record SetReorderRequest(
+    [property: Required] int ProductId,
+    [property: Required] int VendorId,
+    decimal? ReorderLevel);
 
 public record UsagePointDto(DateTime Date, decimal Quantity);
 
 public record DashboardDto(
-    int TotalItems,
+    int TotalProducts,
     int LowStockCount,
     decimal TotalOnHand,
     IReadOnlyList<UsagePointDto> Usage);

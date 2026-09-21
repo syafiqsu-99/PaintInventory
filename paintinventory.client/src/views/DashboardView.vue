@@ -12,8 +12,8 @@ const { dashboard, lowStock } = storeToRefs(store)
 const usage = computed(() => dashboard.value?.usage ?? [])
 
 onMounted(() => {
-  store.loadDashboard()
-  store.loadLowStock()
+    store.loadDashboard()
+    store.loadLowStock()
 })
 </script>
 
@@ -21,22 +21,13 @@ onMounted(() => {
   <v-container fluid>
     <v-row>
       <v-col cols="12" sm="4">
-        <StatCard title="Total items"
-                  :value="dashboard?.totalItems ?? 0"
-                  icon="mdi-format-list-bulleted"
-                  color="primary" />
+        <StatCard title="Products" :value="dashboard?.totalProducts ?? 0" icon="mdi-format-list-bulleted" color="primary" />
       </v-col>
       <v-col cols="12" sm="4">
-        <StatCard title="Low stock"
-                  :value="dashboard?.lowStockCount ?? 0"
-                  icon="mdi-alert"
-                  color="error" />
+        <StatCard title="Low stock" :value="dashboard?.lowStockCount ?? 0" icon="mdi-alert" color="error" />
       </v-col>
       <v-col cols="12" sm="4">
-        <StatCard title="Total on hand"
-                  :value="dashboard?.totalOnHand ?? 0"
-                  icon="mdi-cup"
-                  color="secondary" />
+        <StatCard title="Total on hand" :value="dashboard?.totalOnHand ?? 0" icon="mdi-package-variant" color="secondary" />
       </v-col>
     </v-row>
 

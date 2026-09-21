@@ -93,7 +93,7 @@ async function save() {
                         label="Barcode"
                         :rules="[rules.required]"
                         :disabled="!!item" />
-          <v-row dense>
+          <v-row density="compact">
             <v-col cols="12" sm="6"><v-text-field v-model="form.name" label="Name" /></v-col>
             <v-col cols="12" sm="6"><v-text-field v-model="form.sku" label="SKU" /></v-col>
             <v-col cols="12" sm="6"><v-text-field v-model="form.colorCode" label="Colour code" /></v-col>

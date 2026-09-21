@@ -3,51 +3,38 @@ import { ref } from 'vue'
 import http from '@/utils/http'
 
 export const useInventoryStore = defineStore('inventory', () => {
-  const items = ref([])
+  const levels = ref([])
   const lowStock = ref([])
   const dashboard = ref(null)
   const loading = ref(false)
 
-  async function loadInventory() {
+  async function loadLevels(vendorId = null) {
     loading.value = true
     try {
-      items.value = await http.get('/inventory')
+      const q = vendorId ? `?vendorId=${vendorId}` : ''
+      levels.value = await http.get(`/inventory${q}`)
     } finally {
       loading.value = false
     }
   }
 
-  async function loadLowStock() {
-    lowStock.value = await http.get('/inventory/low-stock')
+  async function loadLowStock(vendorId = null) {
+    const q = vendorId ? `?vendorId=${vendorId}` : ''
+    lowStock.value = await http.get(`/inventory/low-stock${q}`)
   }
 
   async function loadDashboard() {
     dashboard.value = await http.get('/inventory/dashboard')
   }
 
-  function history(id) {
-    return http.get(`/inventory/${id}/history`)
+  function history(productId, vendorId = null) {
+    const q = vendorId ? `?vendorId=${vendorId}` : ''
+    return http.get(`/inventory/${productId}/history${q}`)
   }
 
-  function lookup(barcode) {
-    return http.get(`/paint/${encodeURIComponent(barcode)}`)
+  function setReorder(payload) {
+    return http.put('/inventory/reorder', payload)
   }
 
-  function recordScan(payload) {
-    return http.post('/scan', payload)
-  }
-
-  function createItem(payload) {
-    return http.post('/paint', payload)
-  }
-
-  function updateItem(id, payload) {
-    return http.put(`/paint/${id}`, payload)
-  }
-
-  return {
-    items, lowStock, dashboard, loading,
-    loadInventory, loadLowStock, loadDashboard, history,
-    lookup, recordScan, createItem, updateItem
-  }
+  return { levels, lowStock, dashboard, loading, loadLevels, loadLowStock, loadDashboard, history, setReorder }
 })

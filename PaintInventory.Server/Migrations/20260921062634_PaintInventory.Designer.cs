@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PaintInventory.Server.Data;
 
@@ -11,9 +12,11 @@ using PaintInventory.Server.Data;
 namespace PaintInventory.Server.Migrations
 {
     [DbContext(typeof(PaintInventoryDbContext))]
-    partial class PaintInventoryDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260921062634_PaintInventory")]
+    partial class PaintInventory
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -103,19 +106,11 @@ namespace PaintInventory.Server.Migrations
                     b.Property<int?>("PartAProductId")
                         .HasColumnType("int");
 
-                    b.Property<decimal?>("PartAQtyUsed")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
                     b.Property<string>("PartBBatch")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int?>("PartBProductId")
                         .HasColumnType("int");
-
-                    b.Property<decimal?>("PartBQtyUsed")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal?>("RequiredThicknessUm")
                         .HasPrecision(9, 2)

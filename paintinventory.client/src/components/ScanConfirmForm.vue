@@ -49,7 +49,7 @@ function submit() {
                   min="0"
                   :rules="[rules.required, rules.nonNegative]" />
 
-    <v-row dense>
+    <v-row density="compact">
       <v-col cols="6">
         <v-text-field v-model="unit" label="Unit" />
       </v-col>

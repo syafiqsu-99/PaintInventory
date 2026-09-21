@@ -1,12 +1,12 @@
 <script setup>
-import ScanPanel from '@/components/ScanPanel.vue'
+import StockInForm from '@/components/StockInForm.vue'
 </script>
 
 <template>
   <v-container>
     <v-row justify="center">
-      <v-col cols="12" sm="10" md="7" lg="5">
-        <ScanPanel />
+      <v-col cols="12" md="8" lg="6">
+        <StockInForm />
       </v-col>
     </v-row>
   </v-container>
