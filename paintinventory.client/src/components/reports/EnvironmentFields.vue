@@ -1,25 +1,6 @@
-<script setup>
-import { watch, computed } from 'vue'
-import { dewPoint, belowDewMargin } from '@/utils/dewpoint'
-
-const props = defineProps({
-  model: { type: Object, required: true }
-})
-
-watch(
-  () => [props.model.airTempC, props.model.humidityPct],
-  () => {
-    const dp = dewPoint(props.model.airTempC, props.model.humidityPct)
-    if (dp !== null) props.model.dewPointC = dp
-  }
-)
-
-const warn = computed(() => belowDewMargin(props.model.substrateTempC, props.model.dewPointC))
-</script>
-
 <template>
   <div>
-    <v-row density="compact">
+    <v-row dense>
       <v-col cols="6" sm="3">
         <v-text-field v-model.number="model.humidityPct" label="Humidity %" type="number" variant="outlined" density="comfortable" />
       </v-col>
@@ -38,3 +19,22 @@ const warn = computed(() => belowDewMargin(props.model.substrateTempC, props.mod
     </v-alert>
   </div>
 </template>
+
+<script setup>
+  import { watch, computed } from 'vue'
+  import { dewPoint, belowDewMargin } from '@/utils/dewpoint'
+
+  const props = defineProps({
+      model: { type: Object, required: true }
+  })
+
+  watch(
+      () => [props.model.airTempC, props.model.humidityPct],
+      () => {
+        const dp = dewPoint(props.model.airTempC, props.model.humidityPct)
+        if (dp !== null) props.model.dewPointC = dp
+      }
+  )
+
+  const warn = computed(() => belowDewMargin(props.model.substrateTempC, props.model.dewPointC))
+</script>

@@ -14,7 +14,7 @@ public sealed class InventoryController(PaintInventoryDbContext db) : Controller
     public async Task<ActionResult<IEnumerable<InventoryLevelDto>>> GetLevels(
         [FromQuery] int? vendorId, CancellationToken ct = default)
     {
-        var rows = await BaseLevels(vendorId).OrderBy(l => l.ProductName).ToListAsync(ct);
+        var rows = await BaseLevels(vendorId, onlyLow: false, orderByOnHand: false).ToListAsync(ct);
         return Ok(rows);
     }
 
@@ -22,7 +22,7 @@ public sealed class InventoryController(PaintInventoryDbContext db) : Controller
     public async Task<ActionResult<IEnumerable<InventoryLevelDto>>> GetLowStock(
         [FromQuery] int? vendorId, CancellationToken ct = default)
     {
-        var rows = await BaseLevels(vendorId, onlyLow: true).OrderBy(l => l.OnHandQty).ToListAsync(ct);
+        var rows = await BaseLevels(vendorId, onlyLow: true, orderByOnHand: true).ToListAsync(ct);
         return Ok(rows);
     }
 
@@ -58,12 +58,14 @@ public sealed class InventoryController(PaintInventoryDbContext db) : Controller
         var totalOnHand = await db.StockBalances.SumAsync(b => (decimal?)b.OnHandQty, ct) ?? 0m;
 
         var cutoff = DateTime.UtcNow.Date.AddDays(-13);
-        var usage = await db.StockTransactions.AsNoTracking()
+        var grouped = await db.StockTransactions.AsNoTracking()
             .Where(t => t.Direction == StockDirection.Out && t.Timestamp >= cutoff)
             .GroupBy(t => t.Timestamp.Date)
-            .Select(g => new UsagePointDto(g.Key, g.Sum(x => x.Quantity)))
-            .OrderBy(u => u.Date)
+            .Select(g => new { Date = g.Key, Qty = g.Sum(x => x.Quantity) })
+            .OrderBy(x => x.Date)
             .ToListAsync(ct);
+
+        var usage = grouped.Select(x => new UsagePointDto(x.Date, x.Qty)).ToList();
 
         return Ok(new DashboardDto(totalProducts, lowStockCount, totalOnHand, usage));
     }
@@ -99,7 +101,7 @@ public sealed class InventoryController(PaintInventoryDbContext db) : Controller
     [HttpGet("export")]
     public async Task<IActionResult> Export([FromQuery] int? vendorId, CancellationToken ct = default)
     {
-        var rows = await BaseLevels(vendorId).OrderBy(l => l.ProductName).ToListAsync(ct);
+        var rows = await BaseLevels(vendorId, onlyLow: false, orderByOnHand: false).ToListAsync(ct);
 
         using var workbook = new XLWorkbook();
         var ws = workbook.Worksheets.Add("Stock");
@@ -136,13 +138,17 @@ public sealed class InventoryController(PaintInventoryDbContext db) : Controller
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
     }
 
-    private IQueryable<InventoryLevelDto> BaseLevels(int? vendorId, bool onlyLow = false)
+    private IQueryable<InventoryLevelDto> BaseLevels(int? vendorId, bool onlyLow, bool orderByOnHand)
     {
         var q = db.StockBalances.AsNoTracking().Where(b => b.PaintProduct.IsActive);
         if (vendorId is not null) q = q.Where(b => b.VendorId == vendorId);
         if (onlyLow) q = q.Where(b => b.ReorderLevel != null && b.OnHandQty <= b.ReorderLevel);
 
-        return q.Select(b => new InventoryLevelDto(
+        var ordered = orderByOnHand
+            ? q.OrderBy(b => b.OnHandQty)
+            : q.OrderBy(b => b.PaintProduct.ProductName);
+
+        return ordered.Select(b => new InventoryLevelDto(
             b.Id, b.PaintProductId, b.PaintProduct.Gtin, b.PaintProduct.ProductName, b.PaintProduct.Component,
             b.PaintProduct.DefaultShade ?? b.PaintProduct.RalCode, b.PaintProduct.Unit,
             b.VendorId, b.Vendor.Name, b.OnHandQty, b.ReorderLevel,

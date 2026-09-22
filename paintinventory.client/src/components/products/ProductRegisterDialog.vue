@@ -1,70 +1,10 @@
-<script setup>
-import { ref, watch } from 'vue'
-import { useProductStore } from '@/store/product'
-import { useUiStore } from '@/store/ui'
-
-const props = defineProps({
-  modelValue: { type: Boolean, default: false },
-  gtin: { type: String, default: '' }
-})
-const emit = defineEmits(['update:modelValue', 'registered'])
-
-const products = useProductStore()
-const ui = useUiStore()
-
-const componentOptions = [
-  { title: 'Single component', value: 'Single' },
-  { title: 'Part A (base)', value: 'PartA' },
-  { title: 'Part B (hardener)', value: 'PartB' }
-]
-
-const form = ref(blank())
-const saving = ref(false)
-const valid = ref(false)
-
-function blank() {
-  return {
-    gtin: '', itemCode: null, productName: '', description: null,
-    component: 'Single', packVolume: null, unit: 'L', defaultShade: null,
-    ralCode: null, manufacturer: null, mixRatio: null, partnerProductId: null,
-    unNumber: null, hazardFlags: null, tracksExpiry: false
-  }
-}
-
-watch(() => props.modelValue, (open) => {
-  if (open) {
-    form.value = blank()
-    form.value.gtin = props.gtin
-  }
-})
-
-const rules = { required: (v) => (!!v && String(v).trim() !== '') || 'Required' }
-
-async function save() {
-  if (!valid.value) return
-  saving.value = true
-  try {
-    const payload = { ...form.value }
-    Object.keys(payload).forEach((k) => { if (payload[k] === '') payload[k] = null })
-    const created = await products.create(payload)
-    ui.notify(`Registered ${created.productName}.`)
-    emit('registered', created)
-    emit('update:modelValue', false)
-  } catch (e) {
-    ui.error(e.message)
-  } finally {
-    saving.value = false
-  }
-}
-</script>
-
 <template>
   <v-dialog :model-value="modelValue" max-width="640" @update:model-value="emit('update:modelValue', $event)">
     <v-card>
       <v-card-title>Register new product</v-card-title>
       <v-card-text>
         <v-form v-model="valid">
-          <v-row density="compact">
+          <v-row dense>
             <v-col cols="12" sm="6">
               <v-text-field v-model="form.gtin" label="GTIN" variant="outlined" density="comfortable" readonly />
             </v-col>
@@ -112,3 +52,63 @@ async function save() {
     </v-card>
   </v-dialog>
 </template>
+
+<script setup>
+  import { ref, watch } from 'vue'
+  import { useProductStore } from '@/store/product'
+  import { useUiStore } from '@/store/ui'
+
+  const props = defineProps({
+      modelValue: { type: Boolean, default: false },
+      gtin: { type: String, default: '' }
+  })
+  const emit = defineEmits(['update:modelValue', 'registered'])
+
+  const products = useProductStore()
+  const ui = useUiStore()
+
+  const componentOptions = [
+      { title: 'Single component', value: 'Single' },
+      { title: 'Part A (base)', value: 'PartA' },
+      { title: 'Part B (hardener)', value: 'PartB' }
+  ]
+
+  const form = ref(blank())
+  const saving = ref(false)
+  const valid = ref(false)
+
+  function blank() {
+      return {
+        gtin: '', itemCode: null, productName: '', description: null,
+        component: 'Single', packVolume: null, unit: 'L', defaultShade: null,
+        ralCode: null, manufacturer: null, mixRatio: null, partnerProductId: null,
+        unNumber: null, hazardFlags: null, tracksExpiry: false
+      }
+  }
+
+  watch(() => props.modelValue, (open) => {
+      if (open) {
+        form.value = blank()
+        form.value.gtin = props.gtin
+      }
+  })
+
+  const rules = { required: (v) => (!!v && String(v).trim() !== '') || 'Required' }
+
+  async function save() {
+      if (!valid.value) return
+      saving.value = true
+      try {
+        const payload = { ...form.value }
+        Object.keys(payload).forEach((k) => { if (payload[k] === '') payload[k] = null })
+        const created = await products.create(payload)
+        ui.notify(`Registered ${created.productName}.`)
+        emit('registered', created)
+        emit('update:modelValue', false)
+      } catch (e) {
+        ui.error(e.message)
+      } finally {
+        saving.value = false
+      }
+  }
+</script>

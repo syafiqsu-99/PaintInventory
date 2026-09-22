@@ -1,88 +1,3 @@
-<script setup>
-import { ref, onMounted, computed } from 'vue'
-import { storeToRefs } from 'pinia'
-import { useProductStore } from '@/store/product'
-import { useVendorStore } from '@/store/vendor'
-import { useStockStore } from '@/store/stock'
-import { useUiStore } from '@/store/ui'
-import BarcodeScanField from '@/components/BarcodeScanField.vue'
-import ProductRegisterDialog from '@/components/ProductRegisterDialog.vue'
-
-const products = useProductStore()
-const vendorStore = useVendorStore()
-const stock = useStockStore()
-const ui = useUiStore()
-const { vendors } = storeToRefs(vendorStore)
-
-const barcode = ref('')
-const resolved = ref(null)
-const showRegister = ref(false)
-const pendingGtin = ref('')
-const saving = ref(false)
-const valid = ref(false)
-const form = ref(blankForm())
-
-function blankForm() {
-  return {
-    vendorId: null, quantity: null, batch: null, shade: null, packVolume: null,
-    manufacturingDate: null, bestBefore: null, source: null, operator: null, notes: null
-  }
-}
-
-const stockLocations = computed(() =>
-  vendors.value.filter((v) => v.storesStock).map((v) => ({ title: v.name, value: v.id })))
-
-onMounted(() => { if (!vendors.value.length) vendorStore.load() })
-
-const rules = {
-  required: (v) => (v !== null && v !== undefined && String(v).trim() !== '') || 'Required',
-  positive: (v) => (Number(v) > 0) || 'Must be greater than 0'
-}
-
-function applyProduct(product) {
-  resolved.value = product
-  form.value.shade = product.defaultShade ?? product.ralCode ?? null
-  form.value.packVolume = product.packVolume ?? null
-}
-
-async function onScan(code) {
-  const product = await products.lookup(code)
-  if (product) {
-    applyProduct(product)
-  } else {
-    pendingGtin.value = code
-    showRegister.value = true
-  }
-}
-
-function onRegistered(product) {
-  barcode.value = product.gtin
-  applyProduct(product)
-}
-
-function clear() {
-  barcode.value = ''
-  resolved.value = null
-  form.value = blankForm()
-}
-
-async function submit() {
-  if (!resolved.value || !valid.value) return
-  saving.value = true
-  try {
-    const payload = { productId: resolved.value.id, ...form.value }
-    Object.keys(payload).forEach((k) => { if (payload[k] === '') payload[k] = null })
-    const result = await stock.stockIn(payload)
-    ui.notify(`Stock in: ${resolved.value.productName} — on hand ${result.onHandQty}.`)
-    clear()
-  } catch (e) {
-    ui.error(e.message)
-  } finally {
-    saving.value = false
-  }
-}
-</script>
-
 <template>
   <v-card>
     <v-card-title class="text-subtitle-1">Stock In</v-card-title>
@@ -106,7 +21,7 @@ async function submit() {
       </v-alert>
 
       <v-form v-model="valid" :disabled="!resolved">
-        <v-row density="compact">
+        <v-row dense>
           <v-col cols="12" sm="6">
             <v-select v-model="form.vendorId" :items="stockLocations" label="Location" :rules="[rules.required]" variant="outlined" density="comfortable" />
           </v-col>
@@ -140,3 +55,88 @@ async function submit() {
     <ProductRegisterDialog v-model="showRegister" :gtin="pendingGtin" @registered="onRegistered" />
   </v-card>
 </template>
+
+<script setup>
+  import { ref, onMounted, computed } from 'vue'
+  import { storeToRefs } from 'pinia'
+  import { useProductStore } from '@/store/product'
+  import { useVendorStore } from '@/store/vendor'
+  import { useStockStore } from '@/store/stock'
+  import { useUiStore } from '@/store/ui'
+  import BarcodeScanField from '@/components/common/BarcodeScanField.vue'
+  import ProductRegisterDialog from '@/components/products/ProductRegisterDialog.vue'
+
+  const products = useProductStore()
+  const vendorStore = useVendorStore()
+  const stock = useStockStore()
+  const ui = useUiStore()
+  const { vendors } = storeToRefs(vendorStore)
+
+  const barcode = ref('')
+  const resolved = ref(null)
+  const showRegister = ref(false)
+  const pendingGtin = ref('')
+  const saving = ref(false)
+  const valid = ref(false)
+  const form = ref(blankForm())
+
+  function blankForm() {
+      return {
+        vendorId: null, quantity: null, batch: null, shade: null, packVolume: null,
+        manufacturingDate: null, bestBefore: null, source: null, operator: null, notes: null
+      }
+  }
+
+  const stockLocations = computed(() =>
+      vendors.value.filter((v) => v.storesStock).map((v) => ({ title: v.name, value: v.id })))
+
+  onMounted(() => { if (!vendors.value.length) vendorStore.load() })
+
+  const rules = {
+      required: (v) => (v !== null && v !== undefined && String(v).trim() !== '') || 'Required',
+      positive: (v) => (Number(v) > 0) || 'Must be greater than 0'
+  }
+
+  function applyProduct(product) {
+      resolved.value = product
+      form.value.shade = product.defaultShade ?? product.ralCode ?? null
+      form.value.packVolume = product.packVolume ?? null
+  }
+
+  async function onScan(code) {
+      const product = await products.lookup(code)
+      if (product) {
+        applyProduct(product)
+      } else {
+        pendingGtin.value = code
+        showRegister.value = true
+      }
+  }
+
+  function onRegistered(product) {
+      barcode.value = product.gtin
+      applyProduct(product)
+  }
+
+  function clear() {
+      barcode.value = ''
+      resolved.value = null
+      form.value = blankForm()
+  }
+
+  async function submit() {
+      if (!resolved.value || !valid.value) return
+      saving.value = true
+      try {
+        const payload = { productId: resolved.value.id, ...form.value }
+        Object.keys(payload).forEach((k) => { if (payload[k] === '') payload[k] = null })
+        const result = await stock.stockIn(payload)
+        ui.notify(`Stock in: ${resolved.value.productName} — on hand ${result.onHandQty}.`)
+        clear()
+      } catch (e) {
+        ui.error(e.message)
+      } finally {
+        saving.value = false
+      }
+  }
+</script>

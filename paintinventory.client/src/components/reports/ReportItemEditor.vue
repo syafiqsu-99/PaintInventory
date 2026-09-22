@@ -1,37 +1,3 @@
-<script setup>
-import SurfacePrepForm from '@/components/SurfacePrepForm.vue'
-import CoatLineEditor from '@/components/CoatLineEditor.vue'
-import { blankCoat, coatTypeFor } from '@/utils/reportModel'
-
-const props = defineProps({
-  model: { type: Object, required: true },
-  productOptions: { type: Array, default: () => [] },
-  blastVendors: { type: Array, default: () => [] },
-  paintingVendors: { type: Array, default: () => [] },
-  stockLocations: { type: Array, default: () => [] }
-})
-const emit = defineEmits(['remove'])
-
-const adhesionTypes = [
-  { title: 'None', value: 'None' },
-  { title: 'Test plate', value: 'TestPlate' },
-  { title: 'Production part', value: 'ProductionPart' }
-]
-
-function addCoat() {
-  if (props.model.coats.length >= 4) return
-  props.model.coats.push(blankCoat(props.model.coats.length + 1))
-}
-
-function removeCoat(i) {
-  props.model.coats.splice(i, 1)
-  props.model.coats.forEach((c, idx) => {
-    c.sequence = idx + 1
-    c.coatType = coatTypeFor(idx + 1)
-  })
-}
-</script>
-
 <template>
   <v-card class="mb-4">
     <v-card-title class="d-flex align-center">
@@ -40,7 +6,7 @@ function removeCoat(i) {
       <v-btn size="small" variant="text" color="error" prepend-icon="mdi-delete" @click="emit('remove')">Remove item</v-btn>
     </v-card-title>
     <v-card-text>
-      <v-row density="compact">
+      <v-row dense>
         <v-col cols="6" sm="2"><v-text-field v-model.number="model.itemNo" label="Item no" type="number" variant="outlined" density="comfortable" /></v-col>
         <v-col cols="6" sm="4"><v-text-field v-model="model.serialNumber" label="Serial number" variant="outlined" density="comfortable" /></v-col>
         <v-col cols="6" sm="3"><v-text-field v-model="model.paintingSpec" label="Painting spec" variant="outlined" density="comfortable" /></v-col>
@@ -70,7 +36,7 @@ function removeCoat(i) {
                       @remove="removeCoat(i)" />
 
       <v-divider class="my-3" />
-      <v-row density="compact">
+      <v-row dense>
         <v-col cols="6" sm="3"><v-text-field v-model.number="model.requiredTotalDftUm" label="Req'd total DFT µm" type="number" variant="outlined" density="comfortable" /></v-col>
         <v-col cols="6" sm="3"><v-text-field v-model.number="model.measuredTotalDftUm" label="Measured total DFT µm" type="number" variant="outlined" density="comfortable" /></v-col>
         <v-col cols="12" sm="3"><v-select v-model="model.adhesionTestType" :items="adhesionTypes" label="Adhesion test" variant="outlined" density="comfortable" /></v-col>
@@ -81,3 +47,37 @@ function removeCoat(i) {
     </v-card-text>
   </v-card>
 </template>
+
+<script setup>
+  import SurfacePrepForm from '@/components/reports/SurfacePrepForm.vue'
+  import CoatLineEditor from '@/components/reports/CoatLineEditor.vue'
+  import { blankCoat, coatTypeFor } from '@/utils/reportModel'
+
+  const props = defineProps({
+      model: { type: Object, required: true },
+      productOptions: { type: Array, default: () => [] },
+      blastVendors: { type: Array, default: () => [] },
+      paintingVendors: { type: Array, default: () => [] },
+      stockLocations: { type: Array, default: () => [] }
+  })
+  const emit = defineEmits(['remove'])
+
+  const adhesionTypes = [
+      { title: 'None', value: 'None' },
+      { title: 'Test plate', value: 'TestPlate' },
+      { title: 'Production part', value: 'ProductionPart' }
+  ]
+
+  function addCoat() {
+      if (props.model.coats.length >= 4) return
+      props.model.coats.push(blankCoat(props.model.coats.length + 1))
+  }
+
+  function removeCoat(i) {
+      props.model.coats.splice(i, 1)
+      props.model.coats.forEach((c, idx) => {
+        c.sequence = idx + 1
+        c.coatType = coatTypeFor(idx + 1)
+      })
+  }
+</script>

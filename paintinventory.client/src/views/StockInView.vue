@@ -1,7 +1,3 @@
-<script setup>
-import StockInForm from '@/components/StockInForm.vue'
-</script>
-
 <template>
   <v-container>
     <v-row justify="center">
@@ -11,3 +7,7 @@ import StockInForm from '@/components/StockInForm.vue'
     </v-row>
   </v-container>
 </template>
+
+<script setup>
+    import StockInForm from '@/components/stock/StockInForm.vue'
+</script>

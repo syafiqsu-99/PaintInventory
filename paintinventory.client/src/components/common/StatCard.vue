@@ -1,14 +1,3 @@
-<script setup>
-import { formatNumber } from '@/utils/format'
-
-defineProps({
-  title: { type: String, required: true },
-  value: { type: [Number, String], default: 0 },
-  icon: { type: String, default: 'mdi-information' },
-  color: { type: String, default: 'primary' }
-})
-</script>
-
 <template>
   <v-card>
     <v-card-text class="d-flex align-center">
@@ -22,3 +11,14 @@ defineProps({
     </v-card-text>
   </v-card>
 </template>
+
+<script setup>
+    import { formatNumber } from '@/utils/format'
+
+    defineProps({
+      title: { type: String, required: true },
+      value: { type: [Number, String], default: 0 },
+      icon: { type: String, default: 'mdi-information' },
+      color: { type: String, default: 'primary' }
+    })
+</script>

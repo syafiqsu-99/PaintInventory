@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
+using PdfSharp.Fonts;
 using PaintInventory.Server.Data;
 using PaintInventory.Server.Infrastructure;
 using PaintInventory.Server.Services;
@@ -14,9 +15,13 @@ builder.Services.AddDbContext<PaintInventoryDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddScoped<StockService>();
+builder.Services.AddScoped<ReportService>();
+builder.Services.AddScoped<ReportPdfService>();
 
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
+
+GlobalFontSettings.FontResolver = new WindowsFontResolver();
 
 var app = builder.Build();
 

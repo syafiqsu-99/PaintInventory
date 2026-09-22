@@ -1,9 +1,3 @@
-<script setup>
-defineProps({
-  failed: { type: Boolean, default: false }
-})
-</script>
-
 <template>
   <div class="splash d-flex flex-column align-center justify-center">
     <v-icon icon="mdi-format-paint" size="64" color="primary" class="mb-4" />
@@ -14,6 +8,12 @@ defineProps({
     </div>
   </div>
 </template>
+
+<script setup>
+    defineProps({
+        failed: { type: Boolean, default: false }
+    })
+</script>
 
 <style scoped>
   .splash {

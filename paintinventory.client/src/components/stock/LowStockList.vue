@@ -1,11 +1,3 @@
-<script setup>
-import { formatNumber } from '@/utils/format'
-
-defineProps({
-    items: { type: Array, default: () => [] }
-})
-</script>
-
 <template>
   <v-card>
     <v-card-title class="text-subtitle-1">Low stock</v-card-title>
@@ -24,3 +16,11 @@ defineProps({
     </v-card-text>
   </v-card>
 </template>
+
+<script setup>
+  import { formatNumber } from '@/utils/format'
+
+  defineProps({
+      items: { type: Array, default: () => [] }
+  })
+</script>

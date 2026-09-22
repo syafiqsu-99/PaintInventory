@@ -1,14 +1,8 @@
-<script setup>
-defineProps({
-  model: { type: Object, required: true }
-})
-</script>
-
 <template>
   <v-card class="mb-4">
     <v-card-title class="text-subtitle-1">Report</v-card-title>
     <v-card-text>
-      <v-row density="compact">
+      <v-row dense>
         <v-col cols="12" sm="3"><v-text-field v-model="model.ipo" label="IPO" variant="outlined" density="comfortable" /></v-col>
         <v-col cols="12" sm="3"><v-text-field v-model="model.customer" label="Customer" variant="outlined" density="comfortable" /></v-col>
         <v-col cols="12" sm="3"><v-text-field v-model="model.project" label="Project" variant="outlined" density="comfortable" /></v-col>
@@ -18,3 +12,9 @@ defineProps({
     </v-card-text>
   </v-card>
 </template>
+
+<script setup>
+  defineProps({
+      model: { type: Object, required: true }
+  })
+</script>

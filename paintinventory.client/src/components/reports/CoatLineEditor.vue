@@ -1,15 +1,3 @@
-<script setup>
-import EnvironmentFields from '@/components/EnvironmentFields.vue'
-import { coatLabel } from '@/utils/reportModel'
-
-defineProps({
-  model: { type: Object, required: true },
-  productOptions: { type: Array, default: () => [] },
-  stockLocations: { type: Array, default: () => [] }
-})
-const emit = defineEmits(['remove'])
-</script>
-
 <template>
   <v-card variant="outlined" class="mb-3">
     <v-card-title class="d-flex align-center text-subtitle-2">
@@ -18,7 +6,7 @@ const emit = defineEmits(['remove'])
       <v-btn size="small" variant="text" icon="mdi-delete" @click="emit('remove')" />
     </v-card-title>
     <v-card-text>
-      <v-row density="compact">
+      <v-row dense>
         <v-col cols="12" sm="6">
           <v-select v-model="model.partAProductId" :items="productOptions" label="Part A (paint)" clearable variant="outlined" density="comfortable" />
         </v-col>
@@ -55,7 +43,7 @@ const emit = defineEmits(['remove'])
 
       <v-divider class="my-2" />
       <v-switch v-model="model.deductFromStock" label="Deduct consumed paint from stock" color="primary" density="comfortable" hide-details />
-      <v-row v-if="model.deductFromStock" density="compact" class="mt-1">
+      <v-row v-if="model.deductFromStock" dense class="mt-1">
         <v-col cols="12" sm="4">
           <v-select v-model="model.stockLocationVendorId" :items="stockLocations" label="Stock location" variant="outlined" density="comfortable" />
         </v-col>
@@ -69,3 +57,15 @@ const emit = defineEmits(['remove'])
     </v-card-text>
   </v-card>
 </template>
+
+<script setup>
+  import EnvironmentFields from '@/components/reports/EnvironmentFields.vue'
+  import { coatLabel } from '@/utils/reportModel'
+
+  defineProps({
+      model: { type: Object, required: true },
+      productOptions: { type: Array, default: () => [] },
+      stockLocations: { type: Array, default: () => [] }
+  })
+  const emit = defineEmits(['remove'])
+</script>

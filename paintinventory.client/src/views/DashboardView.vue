@@ -1,22 +1,3 @@
-<script setup>
-import { onMounted, computed } from 'vue'
-import { storeToRefs } from 'pinia'
-import { useInventoryStore } from '@/store/inventory'
-import StatCard from '@/components/StatCard.vue'
-import UsageChart from '@/components/UsageChart.vue'
-import LowStockList from '@/components/LowStockList.vue'
-
-const store = useInventoryStore()
-const { dashboard, lowStock } = storeToRefs(store)
-
-const usage = computed(() => dashboard.value?.usage ?? [])
-
-onMounted(() => {
-    store.loadDashboard()
-    store.loadLowStock()
-})
-</script>
-
 <template>
   <v-container fluid>
     <v-row>
@@ -46,3 +27,22 @@ onMounted(() => {
     </v-row>
   </v-container>
 </template>
+
+<script setup>
+    import { onMounted, computed } from 'vue'
+    import { storeToRefs } from 'pinia'
+    import { useInventoryStore } from '@/store/inventory'
+    import StatCard from '@/components/common/StatCard.vue'
+    import UsageChart from '@/components/common/UsageChart.vue'
+    import LowStockList from '@/components/stock/LowStockList.vue'
+
+    const store = useInventoryStore()
+    const { dashboard, lowStock } = storeToRefs(store)
+
+    const usage = computed(() => dashboard.value?.usage ?? [])
+
+    onMounted(() => {
+        store.loadDashboard()
+        store.loadLowStock()
+    })
+</script>

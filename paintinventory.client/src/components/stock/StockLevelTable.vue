@@ -1,29 +1,7 @@
-<script setup>
-import { formatNumber } from '@/utils/format'
-
-defineProps({
-  items: { type: Array, default: () => [] },
-  loading: { type: Boolean, default: false }
-})
-
-const headers = [
-  { title: 'Product', key: 'productName' },
-  { title: 'Component', key: 'component' },
-  { title: 'Shade', key: 'shade' },
-  { title: 'Location', key: 'vendorName' },
-  { title: 'On hand', key: 'onHandQty', align: 'end' },
-  { title: 'Unit', key: 'unit' },
-  { title: 'Reorder', key: 'reorderLevel', align: 'end' }
-]
-
-const componentLabel = (c) => (c === 'PartA' ? 'Part A' : c === 'PartB' ? 'Part B' : '—')
-const rowProps = ({ item }) => ({ class: item.isLowStock ? 'bg-red-lighten-5' : '' })
-</script>
-
 <template>
   <v-card>
     <v-card-title class="text-subtitle-1">Stock level</v-card-title>
-    <v-data-table :headers="headers"
+    <v-data-table-virtual :headers="headers"
                   :items="items"
                   :loading="loading"
                   :row-props="rowProps"
@@ -42,6 +20,28 @@ const rowProps = ({ item }) => ({ class: item.isLowStock ? 'bg-red-lighten-5' : 
       <template #[`item.reorderLevel`]="{ item }">
         {{ item.reorderLevel != null ? formatNumber(item.reorderLevel) : '—' }}
       </template>
-    </v-data-table>
+    </v-data-table-virtual>
   </v-card>
 </template>
+
+<script setup>
+  import { formatNumber } from '@/utils/format'
+
+  defineProps({
+      items: { type: Array, default: () => [] },
+      loading: { type: Boolean, default: false }
+  })
+
+  const headers = [
+      { title: 'Product', key: 'productName' },
+      { title: 'Component', key: 'component' },
+      { title: 'Shade', key: 'shade' },
+      { title: 'Location', key: 'vendorName' },
+      { title: 'On hand', key: 'onHandQty', align: 'end' },
+      { title: 'Unit', key: 'unit' },
+      { title: 'Reorder', key: 'reorderLevel', align: 'end' }
+  ]
+
+  const componentLabel = (c) => (c === 'PartA' ? 'Part A' : c === 'PartB' ? 'Part B' : '—')
+  const rowProps = ({ item }) => ({ class: item.isLowStock ? 'bg-red-lighten-5' : '' })
+</script>

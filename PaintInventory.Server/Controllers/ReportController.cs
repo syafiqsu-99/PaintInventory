@@ -6,7 +6,7 @@ namespace PaintInventory.Server.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public sealed class ReportsController(ReportService reports) : ControllerBase
+public sealed class ReportsController(ReportService reports, ReportPdfService pdf) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<IEnumerable<ReportListItemDto>>> GetAll(CancellationToken ct)
@@ -17,6 +17,17 @@ public sealed class ReportsController(ReportService reports) : ControllerBase
     {
         var dto = await reports.GetAsync(id, ct);
         return dto is null ? NotFound(new { error = $"Report {id} not found." }) : Ok(dto);
+    }
+
+    [HttpGet("{id:int}/pdf")]
+    public async Task<IActionResult> Pdf(int id, CancellationToken ct)
+    {
+        var report = await reports.GetAsync(id, ct);
+        if (report is null) return NotFound(new { error = $"Report {id} not found." });
+
+        var bytes = pdf.Render(report);
+        var safeIpo = string.Join("_", report.Ipo.Split(Path.GetInvalidFileNameChars()));
+        return File(bytes, "application/pdf", $"paint-report-{safeIpo}.pdf");
     }
 
     [HttpPost]
