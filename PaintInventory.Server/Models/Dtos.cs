@@ -3,9 +3,9 @@
 namespace PaintInventory.Server.Models;
 
 public record ProductRequest(
-    [property: Required] string Gtin,
+    [Required] string Gtin,
     string? ItemCode,
-    [property: Required] string ProductName,
+    [Required] string ProductName,
     string? Description,
     ComponentType Component,
     decimal? PackVolume,
@@ -42,7 +42,7 @@ public record ProductDto(
     DateTime? UpdatedAt);
 
 public record VendorRequest(
-    [property: Required] string Name,
+    [Required] string Name,
     bool IsOwnCompany,
     bool StoresStock,
     bool DoesBlasting,
@@ -59,8 +59,8 @@ public record VendorDto(
     DateTime CreatedAt);
 
 public record StockInRequest(
-    [property: Required] int ProductId,
-    [property: Required] int VendorId,
+    [Required] int ProductId,
+    [Required] int VendorId,
     decimal Quantity,
     string? Batch,
     string? Shade,
@@ -73,8 +73,8 @@ public record StockInRequest(
     string? DeviceId);
 
 public record StockOutRequest(
-    [property: Required] int ProductId,
-    [property: Required] int VendorId,
+    [Required] int ProductId,
+    [Required] int VendorId,
     decimal Quantity,
     string? Batch,
     string? Shade,
@@ -84,16 +84,16 @@ public record StockOutRequest(
     string? DeviceId);
 
 public record StockAdjustRequest(
-    [property: Required] int ProductId,
-    [property: Required] int VendorId,
+    [Required] int ProductId,
+    [Required] int VendorId,
     decimal NewOnHandQty,
     string? Operator,
     string? Notes);
 
 public record StockTransferRequest(
-    [property: Required] int ProductId,
-    [property: Required] int FromVendorId,
-    [property: Required] int ToVendorId,
+    [Required] int ProductId,
+    [Required] int FromVendorId,
+    [Required] int ToVendorId,
     decimal Quantity,
     string? Batch,
     string? Operator,
@@ -140,8 +140,8 @@ public record StockHistoryDto(
     DateTime Timestamp);
 
 public record SetReorderRequest(
-    [property: Required] int ProductId,
-    [property: Required] int VendorId,
+    [Required] int ProductId,
+    [Required] int VendorId,
     decimal? ReorderLevel);
 
 public record UsagePointDto(DateTime Date, decimal Quantity);

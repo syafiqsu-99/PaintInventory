@@ -1,14 +1,14 @@
 const BASE = '/api'
 
-async function request(path, { method = 'GET', body, signal, headers } = {}) {
+async function request(path, { method = 'GET', body, signal, headers, isForm = false } = {}) {
   const res = await fetch(`${BASE}${path}`, {
     method,
     signal,
     headers: {
-      ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+      ...(body !== undefined && !isForm ? { 'Content-Type': 'application/json' } : {}),
       ...headers
     },
-    body: body !== undefined ? JSON.stringify(body) : undefined
+    body: body === undefined ? undefined : isForm ? body : JSON.stringify(body)
   })
 
   if (!res.ok) {
@@ -31,5 +31,6 @@ export default {
   get: (path, opts) => request(path, { ...opts, method: 'GET' }),
   post: (path, body, opts) => request(path, { ...opts, method: 'POST', body }),
   put: (path, body, opts) => request(path, { ...opts, method: 'PUT', body }),
-  del: (path, opts) => request(path, { ...opts, method: 'DELETE' })
+  del: (path, opts) => request(path, { ...opts, method: 'DELETE' }),
+  upload: (path, formData, opts) => request(path, { ...opts, method: 'POST', body: formData, isForm: true })
 }

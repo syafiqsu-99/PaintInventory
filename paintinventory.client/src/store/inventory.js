@@ -6,7 +6,9 @@ export const useInventoryStore = defineStore('inventory', () => {
   const levels = ref([])
   const lowStock = ref([])
   const dashboard = ref(null)
+  const summary = ref(null)
   const loading = ref(false)
+  const summaryLoading = ref(false)
 
   async function loadLevels(vendorId = null) {
     loading.value = true
@@ -27,6 +29,15 @@ export const useInventoryStore = defineStore('inventory', () => {
     dashboard.value = await http.get('/inventory/dashboard')
   }
 
+  async function loadSummary(expiryDays = 60) {
+    summaryLoading.value = true
+    try {
+      summary.value = await http.get(`/dashboard/summary?expiryDays=${expiryDays}`)
+    } finally {
+      summaryLoading.value = false
+    }
+  }
+
   function history(productId, vendorId = null) {
     const q = vendorId ? `?vendorId=${vendorId}` : ''
     return http.get(`/inventory/${productId}/history${q}`)
@@ -36,5 +47,8 @@ export const useInventoryStore = defineStore('inventory', () => {
     return http.put('/inventory/reorder', payload)
   }
 
-  return { levels, lowStock, dashboard, loading, loadLevels, loadLowStock, loadDashboard, history, setReorder }
+  return {
+    levels, lowStock, dashboard, summary, loading, summaryLoading,
+    loadLevels, loadLowStock, loadDashboard, loadSummary, history, setReorder
+  }
 })

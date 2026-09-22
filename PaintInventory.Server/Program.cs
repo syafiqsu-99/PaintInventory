@@ -17,6 +17,7 @@ builder.Services.AddDbContext<PaintInventoryDbContext>(options =>
 builder.Services.AddScoped<StockService>();
 builder.Services.AddScoped<ReportService>();
 builder.Services.AddScoped<ReportPdfService>();
+builder.Services.AddScoped<CsvService>();
 
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
