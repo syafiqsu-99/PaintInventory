@@ -36,12 +36,13 @@ The two are linked but decoupled: a coat *may* consume tracked stock, or may be 
 | 5 | Vendor access | Vendors reach the app over **VPN / site‑to‑site**; IIS stays internal and is **not** exposed to the internet. |
 | 6 | Login | **Per‑site access code** (hashed with `PasswordHasher`), plus the operator's name typed at sign‑in and stamped on every transaction. Own‑company site → `Staff` role; other vendors → `Vendor` role (scan, receive, use, own stock level only). Cookie auth, 12 h sliding, login rate‑limited 5/min/IP. First staff login uses env var `Auth__BootstrapCode` — remove it once real codes are issued. |
 | 7 | Scanned dates | **Day‑first only** (`DD.MM.YYYY`, `DD/MM/YYYY`, `DD-MM-YYYY`, 2‑digit years → 20YY); month‑first is never guessed. Common OCR slips (O→0, I/l→1) corrected; impossible dates rejected, raw text kept. |
+| 8 | Product master | Modelled on the **Jotun / International** product data: brand, family, product type (Coating / Base / CuringAgent / Thinner / Cleaner), technology, category, colour + RAL, gloss, mix ratio, pot life, volume solids, VOC, DFT/WFT range, coverage, temperature resistance, shelf life, MSDS/TDS links. `Colour` replaces `DefaultShade`; `Manufacturer` is dropped (Brand covers it). |
 
 ## 4. Domain model — the grains
 
 | Grain | Entity | Notes |
 |---|---|---|
-| Product master | `PaintProduct` | One row per GTIN/component. Comp A and Comp B are separate rows linked via `PartnerProductId`. |
+| Product master | `PaintProduct` | One row per GTIN/component. Comp A and Comp B are separate rows linked via `PartnerProductId`; recommended thinner and cleaner are self‑links to products of type Thinner / Cleaner. |
 | Location / party | `Vendor` | One table, role flags (own company, stores stock, blasts, paints). Serves stock‑location, blast‑vendor, painting‑vendor roles. |
 | On‑hand (per location) | `StockBalance` | `(PaintProductId, VendorId)` unique. Concurrency‑guarded (`RowVersion`). |
 | Stock ledger | `StockTransaction` | In / Out / Adjustment / Transfer. On‑hand is the sum of the ledger. |
@@ -56,7 +57,19 @@ The two are linked but decoupled: a coat *may* consume tracked stock, or may be 
 
 All names carry the `PaintInventory_` prefix. Decimal precision: stock qty/volume `(18,2)`; thickness/roughness `(9,2)`; humidity/temps `(6,2)`.
 
-**`PaintInventory_Products`** — Gtin (unique), ItemCode, ProductName, Description, Component (Single/PartA/PartB), PackVolume, Unit, DefaultShade, RalCode, Manufacturer, MixRatio, PartnerProductId (self‑FK), UnNumber, HazardFlags, TracksExpiry, IsActive, CreatedAt, UpdatedAt.
+**`PaintInventory_Products`** — indexes: Gtin (unique), Brand, ProductType.
+
+| Group | Columns |
+|---|---|
+| Identity | Gtin, ItemCode, ProductName, Description |
+| Classification | Brand (Jotun/International), ProductFamily, ProductType (Coating/Base/CuringAgent/Thinner/Cleaner), Component (Single/PartA/PartB), Technology, Category, SubCategory |
+| Pack & appearance | PackVolume `(18,2)`, Unit, Colour, RalCode, GlossLevel (Matt/Eggshell/SemiGloss/Gloss/FullGloss) |
+| Application | MixRatio, PotLifeMinutes, VolumeSolidsPct `(5,2)`, VocGramsPerLitre `(7,2)`, DftMinUm, DftMaxUm, WftMinUm, WftMaxUm, CoverageMinM2L `(7,2)`, CoverageMaxM2L `(7,2)`, TemperatureResistance |
+| Links (self‑FK, no cascade) | PartnerProductId (A↔B), ThinnerProductId, CleanerProductId |
+| Safety & shelf life | UnNumber, HazardFlags, MsdsUrl, TdsUrl, ShelfLifeMonths, TracksExpiry |
+| Lifecycle | IsActive, CreatedAt, UpdatedAt |
+
+Stock movements copy the product's **Colour** (falling back to RalCode) into `StockTransaction.Shade`.
 
 **`PaintInventory_Vendors`** — Name (unique), IsOwnCompany, StoresStock, DoesBlasting, DoesPainting, IsActive, CreatedAt, AccessCodeHash, AccessCodeUpdatedAt.
 
@@ -102,7 +115,7 @@ The 12 reporting fields map onto `CoatLine` (fields 2–12) with number‑of‑c
 - Stock In (receipt): source, received qty, batch, mfg/best‑before dates, per location.
 - Stock Out / Transfer / Adjustment.
 - Stock Level: per‑location on‑hand, low‑stock highlight, search/filter.
-- Product master + Vendor/location management.
+- Product master + Vendor/location management. Products and vendors import/export as CSV (preview → commit); the product CSV columns mirror the table groups above, enums by name (e.g. `Brand=Jotun`, `ProductType=CuringAgent`, `GlossLevel=SemiGloss`).
 - Coating report entry: IPO → items → surface prep + coats.
 - **PDF report** matching the Emerson form (per item).
 - Transaction history / audit; dashboard (KPIs, usage chart); Excel export.
@@ -164,7 +177,14 @@ Single IIS site: ASP.NET Core serves the built Vue `dist/` as static files with 
 
 Machine env vars: `ConnectionStrings__DefaultConnection`; `Auth__BootstrapCode` only until the first own‑company site code is issued.
 
-## 13. Open items
+## 13. Development
+
+- **Server:** `dotnet tool restore` (pins `dotnet-ef` 10.0.0, matching the EF Core packages), then `dotnet build` / `dotnet run` in `PaintInventory.Server`. Migrations: `dotnet ef migrations add <Name>`; they apply on startup (`MigrateAsync`).
+- **Client** (`paintinventory.client`): `npm install`, `npm run dev` (Vite on `https://localhost:60338`, proxies `/api` to the server, listens on the LAN so a handheld can test), `npm run build`, `npm run lint` (oxlint + ESLint, auto‑fix).
+- **Publish:** `dotnet publish` runs `npm ci` + `npm run build` and copies `dist/` into `wwwroot/`.
+- This file is the project's only documentation; keep it current instead of adding other `.md` files.
+
+## 14. Open items
 
 - PDF library licensing decision (§10).
 - Whether "number of coats" should hard‑cap at 4 or allow stripe/extra coats (currently modelled Primer→4th; extensible).
