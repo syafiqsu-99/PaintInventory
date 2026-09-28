@@ -7,6 +7,7 @@
       <v-tab value="locations" prepend-icon="mdi-domain">Locations</v-tab>
       <v-tab value="data" prepend-icon="mdi-database-import">Import / export</v-tab>
       <v-tab value="prefs" prepend-icon="mdi-cog-outline">Preferences</v-tab>
+      <v-tab value="security" prepend-icon="mdi-shield-lock-outline">Security</v-tab>
     </v-tabs>
 
     <v-window v-model="tab">
@@ -14,6 +15,7 @@
       <v-window-item value="locations"><LocationsManager /></v-window-item>
       <v-window-item value="data"><ImportExportPanel /></v-window-item>
       <v-window-item value="prefs"><PreferencesPanel /></v-window-item>
+      <v-window-item value="security"><StaffPasswordPanel /></v-window-item>
     </v-window>
   </v-container>
 </template>
@@ -25,8 +27,9 @@
   import LocationsManager from '@/components/settings/LocationsManager.vue'
   import ImportExportPanel from '@/components/settings/ImportExportPanel.vue'
   import PreferencesPanel from '@/components/settings/PreferencesPanel.vue'
+  import StaffPasswordPanel from '@/components/settings/StaffPasswordPanel.vue'
 
   const route = useRoute()
-  const allowed = ['products', 'locations', 'data', 'prefs']
+  const allowed = ['products', 'locations', 'data', 'prefs', 'security']
   const tab = ref(allowed.includes(route.query.tab) ? route.query.tab : 'products')
 </script>

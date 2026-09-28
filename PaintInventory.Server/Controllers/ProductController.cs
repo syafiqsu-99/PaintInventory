@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PaintInventory.Server.Data;
-using PaintInventory.Server.Infrastructure;
 using PaintInventory.Server.Models;
 
 namespace PaintInventory.Server.Controllers;
@@ -21,6 +20,7 @@ public sealed class ProductsController(PaintInventoryDbContext db) : ControllerB
         return Ok(items);
     }
 
+    [AllowAnonymous]
     [HttpGet("{gtin}")]
     public async Task<ActionResult<ProductDto>> GetByGtin(string gtin, CancellationToken ct)
     {
@@ -33,6 +33,7 @@ public sealed class ProductsController(PaintInventoryDbContext db) : ControllerB
             : Ok(item);
     }
 
+    [AllowAnonymous]
     [HttpGet("by-id/{id:int}")]
     public async Task<ActionResult<ProductDto>> GetById(int id, CancellationToken ct)
     {
@@ -40,7 +41,6 @@ public sealed class ProductsController(PaintInventoryDbContext db) : ControllerB
         return item is null ? NotFound(new { error = $"Product {id} not found." }) : Ok(item);
     }
 
-    [Authorize(Policy = AuthConstants.StaffPolicy)]
     [HttpPost]
     public async Task<ActionResult<ProductDto>> Create(ProductRequest req, CancellationToken ct)
     {
@@ -60,7 +60,6 @@ public sealed class ProductsController(PaintInventoryDbContext db) : ControllerB
         return CreatedAtAction(nameof(GetByGtin), new { gtin = product.Gtin }, dto);
     }
 
-    [Authorize(Policy = AuthConstants.StaffPolicy)]
     [HttpPut("{id:int}")]
     public async Task<ActionResult<ProductDto>> Update(int id, ProductRequest req, CancellationToken ct)
     {
@@ -83,7 +82,6 @@ public sealed class ProductsController(PaintInventoryDbContext db) : ControllerB
         return Ok(dto);
     }
 
-    [Authorize(Policy = AuthConstants.StaffPolicy)]
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Deactivate(int id, CancellationToken ct)
     {

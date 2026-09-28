@@ -8,7 +8,7 @@
                 :class="{ pulse: listening && !busy }" />
         <div class="text-h6 mt-3">{{ statusText }}</div>
         <div class="text-body-1 text-medium-emphasis mt-1">
-          Point the scanner at a paint barcode — the form opens automatically.
+          {{ isStaff ? 'Point the scanner at a paint barcode — the movement form opens automatically.' : 'Point the scanner at a paint barcode to see its product details.' }}
         </div>
 
         <div class="d-flex flex-column flex-sm-row align-stretch align-sm-center ga-2 mt-6">
@@ -35,19 +35,10 @@
       </v-card-text>
     </v-card>
 
-    <IncomingTransfers v-if="!isStaff"
-                       :items="incoming"
-                       :loading="incomingLoading"
-                       @select="openIncoming"
-                       @refresh="loadIncoming" />
-
     <RecentScans :items="recent" />
 
-    <ScanDialog v-model="dialogOpen"
-                :product="resolved"
-                :pending="pendingForProduct"
-                :initial-transaction-id="initialTransactionId"
-                @done="onDone" />
+    <ScanDialog v-model="dialogOpen" :product="resolved" @done="onDone" />
+    <ProductDetailsDialog v-model="detailsOpen" :product="resolved" />
     <ProductRegisterDialog v-if="isStaff" v-model="registerOpen" :gtin="pendingGtin" @registered="onRegistered" />
   </div>
 </template>
@@ -60,18 +51,16 @@
     import { useSettingsStore } from '@/store/settings'
     import { useUiStore } from '@/store/ui'
     import { useAuthStore } from '@/store/auth'
-    import { useStockStore } from '@/store/stock'
     import { useScanner } from '@/composables/useScanner'
     import ProductRegisterDialog from '@/components/products/ProductRegisterDialog.vue'
     import ScanDialog from '@/components/scan/ScanDialog.vue'
     import RecentScans from '@/components/scan/RecentScans.vue'
-    import IncomingTransfers from '@/components/scan/IncomingTransfers.vue'
+    import ProductDetailsDialog from '@/components/scan/ProductDetailsDialog.vue'
 
     const products = useProductStore()
     const vendorStore = useVendorStore()
     const settings = useSettingsStore()
     const ui = useUiStore()
-    const stock = useStockStore()
     const { isStaff } = storeToRefs(useAuthStore())
     const { vendors } = storeToRefs(vendorStore)
     const { prefs } = storeToRefs(settings)
@@ -84,18 +73,13 @@
     const registerOpen = ref(false)
     const pendingGtin = ref('')
     const recent = ref([])
-    const incoming = ref([])
-    const incomingLoading = ref(false)
-    const initialTransactionId = ref(null)
-
-    const pendingForProduct = computed(() =>
-      resolved.value ? incoming.value.filter((t) => t.productId === resolved.value.id) : [])
+    const detailsOpen = ref(false)
 
     // Hands-free fallback: fires only when focus is NOT in an editable field,
     // so it complements (never double-fires with) the focused input below.
     const { pause, resume } = useScanner(onScan)
 
-    const listening = computed(() => !dialogOpen.value && !registerOpen.value)
+    const listening = computed(() => !dialogOpen.value && !registerOpen.value && !detailsOpen.value)
     const statusText = computed(() => {
       if (busy.value) return 'Looking up…'
       return listening.value ? 'Ready to scan' : 'Paused — finish the open form'
@@ -105,34 +89,11 @@
       if (on) { resume(); focusField() } else { pause() }
     })
 
-    onMounted(() => {
-      if (isStaff.value && !vendors.value.length) vendorStore.load()
-      if (!isStaff.value) loadIncoming()
-      focusField()
-    })
+    watch(isStaff, (staff) => {
+      if (staff && !vendors.value.length) vendorStore.load()
+    }, { immediate: true })
 
-    async function loadIncoming() {
-      incomingLoading.value = true
-      try {
-        incoming.value = await stock.inTransit()
-      } catch (e) {
-        ui.error(e.message)
-      } finally {
-        incomingLoading.value = false
-      }
-    }
-
-    async function openIncoming(transfer) {
-      try {
-        const product = await products.lookup(transfer.gtin)
-        if (!product) return ui.error(`GTIN ${transfer.gtin} is no longer registered.`)
-        initialTransactionId.value = transfer.transactionId
-        resolved.value = product
-        dialogOpen.value = true
-      } catch (e) {
-        ui.error(e.message)
-      }
-    }
+    onMounted(focusField)
 
     function focusField() {
       nextTick(() => scanField.value?.focus())
@@ -150,8 +111,11 @@
       beep()
       try {
         const product = await products.lookup(gtin)
-        if (product) {
-          initialTransactionId.value = null
+        if (product && !isStaff.value) {
+          resolved.value = product
+          detailsOpen.value = true
+          pushRecent({ time: new Date(), direction: 'lookup', productName: product.productName, detail: product.colour ?? product.ralCode ?? product.gtin })
+        } else if (product) {
           resolved.value = product
           dialogOpen.value = true
         } else if (!isStaff.value) {
@@ -177,9 +141,12 @@
     }
 
     function onDone(entry) {
+      pushRecent(entry)
+    }
+
+    function pushRecent(entry) {
       recent.value.unshift(entry)
       if (recent.value.length > 25) recent.value.pop()
-      if (!isStaff.value && entry.direction === 'receive') loadIncoming()
     }
 
     function beep() {

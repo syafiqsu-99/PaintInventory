@@ -22,6 +22,23 @@ namespace PaintInventory.Server.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("PaintInventory.Server.Models.AppSetting", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Value")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Key");
+
+                    b.ToTable("PaintInventory_AppSettings", (string)null);
+                });
+
             modelBuilder.Entity("PaintInventory.Server.Models.AuditLog", b =>
                 {
                     b.Property<int>("Id")
@@ -486,17 +503,6 @@ namespace PaintInventory.Server.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<DateTime?>("ReceivedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("ReceivedBy")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<decimal?>("ReceivedQty")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
                     b.Property<string>("Shade")
                         .HasColumnType("nvarchar(max)");
 
@@ -513,13 +519,13 @@ namespace PaintInventory.Server.Migrations
 
                     b.HasIndex("CoatLineId");
 
+                    b.HasIndex("CounterpartyVendorId");
+
                     b.HasIndex("PaintProductId");
 
                     b.HasIndex("Timestamp");
 
                     b.HasIndex("VendorId");
-
-                    b.HasIndex("CounterpartyVendorId", "ReceivedAt");
 
                     b.ToTable("PaintInventory_StockTransactions", (string)null);
                 });
@@ -582,13 +588,6 @@ namespace PaintInventory.Server.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("AccessCodeHash")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.Property<DateTime?>("AccessCodeUpdatedAt")
-                        .HasColumnType("datetime2");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");

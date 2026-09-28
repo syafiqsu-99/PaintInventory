@@ -33,9 +33,6 @@
         <template #[`item.doesPainting`]="{ item }">
           <v-icon v-if="item.doesPainting" icon="mdi-check" color="success" size="small" />
         </template>
-        <template #[`item.hasAccessCode`]="{ item }">
-          <v-icon v-if="item.hasAccessCode" icon="mdi-key-variant" color="primary" size="small" />
-        </template>
         <template #[`item.actions`]="{ item }">
           <v-btn size="small" variant="text" icon="mdi-pencil" title="Edit" @click="edit(item)" />
         </template>
@@ -71,7 +68,6 @@
     { title: 'Stock', key: 'storesStock', align: 'center' },
     { title: 'Blasting', key: 'doesBlasting', align: 'center' },
     { title: 'Painting', key: 'doesPainting', align: 'center' },
-    { title: 'Access', key: 'hasAccessCode', align: 'center' },
     { title: '', key: 'actions', sortable: false, align: 'end' }
   ]
 

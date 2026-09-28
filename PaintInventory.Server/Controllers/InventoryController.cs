@@ -1,22 +1,20 @@
 ﻿using ClosedXML.Excel;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PaintInventory.Server.Data;
-using PaintInventory.Server.Infrastructure;
 using PaintInventory.Server.Models;
 
 namespace PaintInventory.Server.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public sealed class InventoryController(PaintInventoryDbContext db, UserContext user) : ControllerBase
+public sealed class InventoryController(PaintInventoryDbContext db) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<IEnumerable<InventoryLevelDto>>> GetLevels(
         [FromQuery] int? vendorId, CancellationToken ct = default)
     {
-        var rows = await BaseLevels(ScopedVendor(vendorId), onlyLow: false, orderByOnHand: false).ToListAsync(ct);
+        var rows = await BaseLevels(vendorId, onlyLow: false, orderByOnHand: false).ToListAsync(ct);
         return Ok(rows);
     }
 
@@ -24,7 +22,7 @@ public sealed class InventoryController(PaintInventoryDbContext db, UserContext 
     public async Task<ActionResult<IEnumerable<InventoryLevelDto>>> GetLowStock(
         [FromQuery] int? vendorId, CancellationToken ct = default)
     {
-        var rows = await BaseLevels(ScopedVendor(vendorId), onlyLow: true, orderByOnHand: true).ToListAsync(ct);
+        var rows = await BaseLevels(vendorId, onlyLow: true, orderByOnHand: true).ToListAsync(ct);
         return Ok(rows);
     }
 
@@ -35,7 +33,6 @@ public sealed class InventoryController(PaintInventoryDbContext db, UserContext 
         if (!await db.PaintProducts.AnyAsync(p => p.Id == productId, ct))
             return NotFound(new { error = $"Product {productId} not found." });
 
-        vendorId = ScopedVendor(vendorId);
         var q = db.StockTransactions.AsNoTracking().Where(t => t.PaintProductId == productId);
         if (vendorId is not null)
             q = q.Where(t => t.VendorId == vendorId || t.CounterpartyVendorId == vendorId);
@@ -52,7 +49,6 @@ public sealed class InventoryController(PaintInventoryDbContext db, UserContext 
         return Ok(rows);
     }
 
-    [Authorize(Policy = AuthConstants.StaffPolicy)]
     [HttpGet("dashboard")]
     public async Task<ActionResult<DashboardDto>> GetDashboard(CancellationToken ct)
     {
@@ -74,7 +70,6 @@ public sealed class InventoryController(PaintInventoryDbContext db, UserContext 
         return Ok(new DashboardDto(totalProducts, lowStockCount, totalOnHand, usage));
     }
 
-    [Authorize(Policy = AuthConstants.StaffPolicy)]
     [HttpPut("reorder")]
     public async Task<IActionResult> SetReorder(SetReorderRequest req, CancellationToken ct)
     {
@@ -103,7 +98,6 @@ public sealed class InventoryController(PaintInventoryDbContext db, UserContext 
         return Ok(new { req.ProductId, req.VendorId, req.ReorderLevel });
     }
 
-    [Authorize(Policy = AuthConstants.StaffPolicy)]
     [HttpGet("export")]
     public async Task<IActionResult> Export([FromQuery] int? vendorId, CancellationToken ct = default)
     {
@@ -143,8 +137,6 @@ public sealed class InventoryController(PaintInventoryDbContext db, UserContext 
         return File(stream.ToArray(),
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
     }
-
-    private int? ScopedVendor(int? requested) => user.IsStaff ? requested : user.VendorId ?? -1;
 
     private IQueryable<InventoryLevelDto> BaseLevels(int? vendorId, bool onlyLow, bool orderByOnHand)
     {

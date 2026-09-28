@@ -81,10 +81,7 @@
           const payload = { ...form.value }
           Object.keys(payload).forEach((k) => { if (payload[k] === '') payload[k] = null })
           const result = await stock.transfer(payload)
-          const sent = result.from.quantityApplied * -1
-          ui.notify(result.to.quantityApplied === 0
-            ? `Sent ${sent} to ${result.to.vendorName} — in transit until they confirm receipt. ${result.from.vendorName}: ${result.from.onHandQty}.`
-            : `Transferred ${sent} — ${result.from.vendorName}: ${result.from.onHandQty}, ${result.to.vendorName}: ${result.to.onHandQty}.`)
+          ui.notify(`Transferred ${result.from.quantityApplied * -1} — ${result.from.vendorName}: ${result.from.onHandQty}, ${result.to.vendorName}: ${result.to.onHandQty}.`)
           form.value = blankForm()
         } catch (e) {
           ui.error(e.message)

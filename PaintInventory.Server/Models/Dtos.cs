@@ -100,8 +100,7 @@ public record VendorDto(
     bool DoesBlasting,
     bool DoesPainting,
     bool IsActive,
-    DateTime CreatedAt,
-    bool HasAccessCode);
+    DateTime CreatedAt);
 
 public record StockInRequest(
     [Required] int ProductId,
@@ -145,28 +144,6 @@ public record StockTransferRequest(
     string? Batch,
     string? Operator,
     string? Notes);
-
-public record StockReceiveRequest(
-    [Required] int TransactionId,
-    decimal ReceivedQty,
-    string? Batch,
-    string? Notes,
-    Dictionary<string, string>? ScanRaw = null);
-
-public record InTransitDto(
-    int TransactionId,
-    int ProductId,
-    string Gtin,
-    string ProductName,
-    ComponentType Component,
-    decimal Quantity,
-    string? Batch,
-    int FromVendorId,
-    string FromVendorName,
-    int ToVendorId,
-    string ToVendorName,
-    string? Operator,
-    DateTime SentAt);
 
 public record StockResult(
     int TransactionId,

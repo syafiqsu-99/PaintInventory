@@ -9,13 +9,14 @@
     <v-list v-if="items.length" lines="two" density="comfortable">
       <v-list-item v-for="(s, i) in items" :key="i">
         <template #prepend>
-          <v-avatar :color="isIn(s) ? 'success' : 'primary'" size="36" variant="tonal">
-            <v-icon :icon="isIn(s) ? 'mdi-tray-arrow-down' : 'mdi-tray-arrow-up'" size="20" />
+          <v-avatar :color="s.direction === 'lookup' ? 'secondary' : s.direction === 'in' ? 'success' : 'primary'" size="36" variant="tonal">
+            <v-icon :icon="icon(s)" size="20" />
           </v-avatar>
         </template>
         <v-list-item-title class="text-body-1 font-weight-medium text-wrap">{{ s.productName }}</v-list-item-title>
-        <v-list-item-subtitle class="text-body-2">
-          {{ isIn(s) ? '+' : '−' }}{{ s.quantity }} · {{ s.vendorName }} · on hand {{ s.onHandQty }}
+        <v-list-item-subtitle v-if="s.direction === 'lookup'" class="text-body-2">{{ s.detail }}</v-list-item-subtitle>
+        <v-list-item-subtitle v-else class="text-body-2">
+          {{ s.direction === 'in' ? '+' : '−' }}{{ s.quantity }} · {{ s.vendorName }} · on hand {{ s.onHandQty }}
         </v-list-item-subtitle>
         <template #append>
           <span class="text-caption text-medium-emphasis">{{ time(s.time) }}</span>
@@ -23,7 +24,7 @@
       </v-list-item>
     </v-list>
     <v-card-text v-else class="text-center text-medium-emphasis py-8">
-      Scanned movements will appear here.
+      Scans from this session will appear here.
     </v-card-text>
   </v-card>
 </template>
@@ -33,7 +34,7 @@
     items: { type: Array, default: () => [] }
   })
 
-  const isIn = (s) => s.direction === 'in' || s.direction === 'receive'
+  const icon = (s) => ({ lookup: 'mdi-magnify', in: 'mdi-tray-arrow-down' })[s.direction] ?? 'mdi-tray-arrow-up'
 
   function time(d) {
     return new Date(d).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })

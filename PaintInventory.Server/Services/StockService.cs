@@ -1,7 +1,6 @@
 ﻿using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using PaintInventory.Server.Data;
-using PaintInventory.Server.Infrastructure;
 using PaintInventory.Server.Models;
 
 namespace PaintInventory.Server.Services;
@@ -11,7 +10,6 @@ public enum StockOpStatus
     Ok,
     ProductNotFound,
     LocationNotFound,
-    TransactionNotFound,
     InsufficientStock,
     Invalid
 }
@@ -22,7 +20,7 @@ public sealed record StockOutcome(
     StockResult? Secondary = null,
     string? Error = null);
 
-public sealed class StockService(PaintInventoryDbContext db, UserContext user)
+public sealed class StockService(PaintInventoryDbContext db)
 {
     public async Task<StockOutcome> StockInAsync(StockInRequest req, CancellationToken ct)
     {
@@ -37,7 +35,6 @@ public sealed class StockService(PaintInventoryDbContext db, UserContext user)
         if (vendor is null)
             return new StockOutcome(StockOpStatus.LocationNotFound, Error: $"Location {req.VendorId} not found.");
 
-        var operatorName = OperatorFor(req.Operator);
         var now = DateTime.UtcNow;
         var balance = await GetOrCreateBalanceAsync(req.ProductId, req.VendorId, ct);
         balance.OnHandQty += req.Quantity;
@@ -55,13 +52,13 @@ public sealed class StockService(PaintInventoryDbContext db, UserContext user)
             ManufacturingDate = req.ManufacturingDate,
             BestBefore = req.BestBefore,
             Source = req.Source,
-            Operator = operatorName,
+            Operator = req.Operator,
             Notes = req.Notes,
             DeviceId = req.DeviceId,
             Timestamp = now
         };
         db.StockTransactions.Add(txn);
-        AddAudit(nameof(StockTransaction), StockDirection.In.ToString(), operatorName,
+        AddAudit(nameof(StockTransaction), StockDirection.In.ToString(), req.Operator,
             new { req.ProductId, req.VendorId, req.Quantity, newOnHand = balance.OnHandQty, scanRaw = req.ScanRaw });
 
         await SaveWithRetryAsync(ct);
@@ -70,13 +67,6 @@ public sealed class StockService(PaintInventoryDbContext db, UserContext user)
 
     public async Task<StockOutcome> StockOutAsync(StockOutRequest req, CancellationToken ct)
     {
-        if (!user.IsStaff)
-        {
-            if (user.VendorId is not int ownVendorId)
-                return Invalid("Your session has no site assigned.");
-            req = req with { VendorId = ownVendorId };
-        }
-
         if (req.Quantity <= 0)
             return Invalid("Quantity must be greater than zero.");
 
@@ -94,7 +84,6 @@ public sealed class StockService(PaintInventoryDbContext db, UserContext user)
             return new StockOutcome(StockOpStatus.InsufficientStock,
                 Error: $"Insufficient stock at {vendor.Name}. On hand: {balance?.OnHandQty ?? 0m}, requested: {req.Quantity}.");
 
-        var operatorName = OperatorFor(req.Operator);
         var now = DateTime.UtcNow;
         balance.OnHandQty -= req.Quantity;
         balance.UpdatedAt = now;
@@ -108,13 +97,13 @@ public sealed class StockService(PaintInventoryDbContext db, UserContext user)
             Batch = req.Batch,
             Shade = req.Shade,
             CoatLineId = req.CoatLineId,
-            Operator = operatorName,
+            Operator = req.Operator,
             Notes = req.Notes,
             DeviceId = req.DeviceId,
             Timestamp = now
         };
         db.StockTransactions.Add(txn);
-        AddAudit(nameof(StockTransaction), StockDirection.Out.ToString(), operatorName,
+        AddAudit(nameof(StockTransaction), StockDirection.Out.ToString(), req.Operator,
             new { req.ProductId, req.VendorId, req.Quantity, req.CoatLineId, newOnHand = balance.OnHandQty, scanRaw = req.ScanRaw });
 
         await SaveWithRetryAsync(ct);
@@ -134,7 +123,6 @@ public sealed class StockService(PaintInventoryDbContext db, UserContext user)
         if (vendor is null)
             return new StockOutcome(StockOpStatus.LocationNotFound, Error: $"Location {req.VendorId} not found.");
 
-        var operatorName = OperatorFor(req.Operator);
         var now = DateTime.UtcNow;
         var balance = await GetOrCreateBalanceAsync(req.ProductId, req.VendorId, ct);
         var previous = balance.OnHandQty;
@@ -148,12 +136,12 @@ public sealed class StockService(PaintInventoryDbContext db, UserContext user)
             VendorId = req.VendorId,
             Direction = StockDirection.Adjustment,
             Quantity = Math.Abs(delta),
-            Operator = operatorName,
+            Operator = req.Operator,
             Notes = req.Notes,
             Timestamp = now
         };
         db.StockTransactions.Add(txn);
-        AddAudit(nameof(StockTransaction), StockDirection.Adjustment.ToString(), operatorName,
+        AddAudit(nameof(StockTransaction), StockDirection.Adjustment.ToString(), req.Operator,
             new { req.ProductId, req.VendorId, previous, adjustedTo = req.NewOnHandQty, delta });
 
         await SaveWithRetryAsync(ct);
@@ -182,28 +170,12 @@ public sealed class StockService(PaintInventoryDbContext db, UserContext user)
             return new StockOutcome(StockOpStatus.InsufficientStock,
                 Error: $"Insufficient stock at {from.Name}. On hand: {fromBalance?.OnHandQty ?? 0m}, requested: {req.Quantity}.");
 
-        var operatorName = OperatorFor(req.Operator);
         var now = DateTime.UtcNow;
-        var inTransit = !to.IsOwnCompany;
-
+        var toBalance = await GetOrCreateBalanceAsync(req.ProductId, req.ToVendorId, ct);
         fromBalance.OnHandQty -= req.Quantity;
         fromBalance.UpdatedAt = now;
-
-        StockBalance toBalance;
-        if (inTransit)
-        {
-            var existing = await db.StockBalances.AsNoTracking()
-                .Where(b => b.PaintProductId == req.ProductId && b.VendorId == req.ToVendorId)
-                .Select(b => new { b.OnHandQty, b.ReorderLevel })
-                .FirstOrDefaultAsync(ct);
-            toBalance = new StockBalance { OnHandQty = existing?.OnHandQty ?? 0m, ReorderLevel = existing?.ReorderLevel };
-        }
-        else
-        {
-            toBalance = await GetOrCreateBalanceAsync(req.ProductId, req.ToVendorId, ct);
-            toBalance.OnHandQty += req.Quantity;
-            toBalance.UpdatedAt = now;
-        }
+        toBalance.OnHandQty += req.Quantity;
+        toBalance.UpdatedAt = now;
 
         var txn = new StockTransaction
         {
@@ -213,118 +185,20 @@ public sealed class StockService(PaintInventoryDbContext db, UserContext user)
             Direction = StockDirection.Transfer,
             Quantity = req.Quantity,
             Batch = req.Batch,
-            Operator = operatorName,
+            Operator = req.Operator,
             Notes = req.Notes,
-            Timestamp = now,
-            ReceivedAt = inTransit ? null : now,
-            ReceivedBy = inTransit ? null : operatorName,
-            ReceivedQty = inTransit ? null : req.Quantity
+            Timestamp = now
         };
         db.StockTransactions.Add(txn);
-        AddAudit(nameof(StockTransaction), StockDirection.Transfer.ToString(), operatorName,
-            new { req.ProductId, req.FromVendorId, req.ToVendorId, req.Quantity, inTransit });
+        AddAudit(nameof(StockTransaction), StockDirection.Transfer.ToString(), req.Operator,
+            new { req.ProductId, req.FromVendorId, req.ToVendorId, req.Quantity });
 
         await SaveWithRetryAsync(ct);
 
         var fromResult = BuildResult(txn.Id, product, from, StockDirection.Transfer, -req.Quantity, fromBalance, now);
-        var toResult = BuildResult(txn.Id, product, to, StockDirection.Transfer, inTransit ? 0m : req.Quantity, toBalance, now);
+        var toResult = BuildResult(txn.Id, product, to, StockDirection.Transfer, req.Quantity, toBalance, now);
         return new StockOutcome(StockOpStatus.Ok, fromResult, toResult);
     }
-
-    public async Task<StockOutcome> ReceiveAsync(StockReceiveRequest req, CancellationToken ct)
-    {
-        if (req.ReceivedQty <= 0)
-            return Invalid("Received quantity must be greater than zero.");
-
-        var txn = await db.StockTransactions
-            .FirstOrDefaultAsync(t => t.Id == req.TransactionId
-                && t.Direction == StockDirection.Transfer
-                && t.ReceivedAt == null, ct);
-        if (txn is null || txn.CounterpartyVendorId is not int toVendorId)
-            return new StockOutcome(StockOpStatus.TransactionNotFound,
-                Error: $"No pending transfer {req.TransactionId} to receive.");
-
-        if (!user.IsStaff && user.VendorId != toVendorId)
-            return new StockOutcome(StockOpStatus.TransactionNotFound,
-                Error: $"No pending transfer {req.TransactionId} to receive.");
-
-        if (req.ReceivedQty > txn.Quantity)
-            return Invalid($"Received quantity cannot exceed the {txn.Quantity} sent.");
-
-        var product = await db.PaintProducts.FirstAsync(p => p.Id == txn.PaintProductId, ct);
-        var vendor = await ActiveVendorAsync(toVendorId, ct);
-        if (vendor is null)
-            return new StockOutcome(StockOpStatus.LocationNotFound, Error: $"Location {toVendorId} not found.");
-
-        await using var dbTxn = await db.Database.BeginTransactionAsync(ct);
-
-        var now = DateTime.UtcNow;
-        var operatorName = OperatorFor(null);
-
-        var claimed = await db.StockTransactions
-            .Where(t => t.Id == txn.Id && t.ReceivedAt == null)
-            .ExecuteUpdateAsync(u => u
-                .SetProperty(t => t.ReceivedAt, now)
-                .SetProperty(t => t.ReceivedBy, operatorName)
-                .SetProperty(t => t.ReceivedQty, req.ReceivedQty), ct);
-        if (claimed == 0)
-            return new StockOutcome(StockOpStatus.TransactionNotFound,
-                Error: $"Transfer {req.TransactionId} was already received.");
-
-        var balance = await GetOrCreateBalanceAsync(txn.PaintProductId, toVendorId, ct);
-        balance.OnHandQty += req.ReceivedQty;
-        balance.UpdatedAt = now;
-
-        var receivedBatch = string.IsNullOrWhiteSpace(req.Batch) ? null : req.Batch.Trim();
-        if (txn.Batch is null && receivedBatch is not null)
-            txn.Batch = receivedBatch;
-        if (!string.IsNullOrWhiteSpace(req.Notes))
-            txn.Notes = string.IsNullOrWhiteSpace(txn.Notes) ? req.Notes : $"{txn.Notes} | Received: {req.Notes}";
-
-        var variance = req.ReceivedQty - txn.Quantity;
-        AddAudit(nameof(StockTransaction), variance == 0 ? "Received" : "ReceivedWithVariance", operatorName,
-            new
-            {
-                transactionId = txn.Id,
-                txn.PaintProductId,
-                toVendorId,
-                sent = txn.Quantity,
-                received = req.ReceivedQty,
-                variance,
-                sentBatch = txn.Batch,
-                receivedBatch,
-                newOnHand = balance.OnHandQty,
-                scanRaw = req.ScanRaw
-            });
-
-        await SaveWithRetryAsync(ct);
-        await dbTxn.CommitAsync(ct);
-
-        var isLow = balance.ReorderLevel.HasValue && balance.OnHandQty <= balance.ReorderLevel.Value;
-        return new StockOutcome(StockOpStatus.Ok, new StockResult(txn.Id, product.Id, product.Gtin, vendor.Id, vendor.Name,
-            StockDirection.Transfer, req.ReceivedQty, balance.OnHandQty, isLow, now));
-    }
-
-    public Task<List<InTransitDto>> GetInTransitAsync(int? toVendorId, CancellationToken ct)
-    {
-        if (!user.IsStaff)
-            toVendorId = user.VendorId ?? -1;
-
-        var q = db.StockTransactions.AsNoTracking()
-            .Where(t => t.Direction == StockDirection.Transfer && t.ReceivedAt == null && t.CounterpartyVendorId != null);
-        if (toVendorId is not null)
-            q = q.Where(t => t.CounterpartyVendorId == toVendorId);
-
-        return q.OrderBy(t => t.Timestamp)
-            .Select(t => new InTransitDto(
-                t.Id, t.PaintProductId, t.PaintProduct.Gtin, t.PaintProduct.ProductName, t.PaintProduct.Component,
-                t.Quantity, t.Batch, t.VendorId, t.Vendor.Name,
-                t.CounterpartyVendorId!.Value, t.CounterpartyVendor!.Name, t.Operator, t.Timestamp))
-            .ToListAsync(ct);
-    }
-
-    private string? OperatorFor(string? requested) =>
-        string.IsNullOrWhiteSpace(user.Operator) ? requested : user.Operator;
 
     private Task<PaintProduct?> ActiveProductAsync(int id, CancellationToken ct) =>
         db.PaintProducts.FirstOrDefaultAsync(p => p.Id == id && p.IsActive, ct);

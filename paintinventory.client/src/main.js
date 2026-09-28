@@ -9,10 +9,7 @@ import '@mdi/font/css/materialdesignicons.css'
 
 const pinia = createPinia()
 
-onUnauthorized(() => {
-  useAuthStore(pinia).clear()
-  if (router.currentRoute.value.name !== 'login') router.push({ name: 'login' })
-})
+onUnauthorized(() => useAuthStore(pinia).onDenied())
 
 createApp(App)
   .use(pinia)

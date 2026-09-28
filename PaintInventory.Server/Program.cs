@@ -22,7 +22,7 @@ builder.Services.AddDbContext<PaintInventoryDbContext>(options =>
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(o =>
     {
-        o.Cookie.Name = "PaintInventory.Auth";
+        o.Cookie.Name = "PaintInventory.Staff";
         o.Cookie.HttpOnly = true;
         o.Cookie.SecurePolicy = CookieSecurePolicy.Always;
         o.Cookie.SameSite = SameSiteMode.Strict;
@@ -41,13 +41,12 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     });
 
 builder.Services.AddAuthorizationBuilder()
-    .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build())
-    .AddPolicy(AuthConstants.StaffPolicy, p => p.RequireRole(AuthConstants.StaffRole));
+    .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireRole(AuthConstants.StaffRole).Build());
 
 builder.Services.AddRateLimiter(o =>
 {
     o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-    o.AddPolicy(AuthConstants.LoginRateLimit, ctx =>
+    o.AddPolicy(AuthConstants.UnlockRateLimit, ctx =>
         RateLimitPartition.GetFixedWindowLimiter(
             ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
             _ => new FixedWindowRateLimiterOptions
@@ -58,9 +57,8 @@ builder.Services.AddRateLimiter(o =>
             }));
 });
 
-builder.Services.AddHttpContextAccessor();
-builder.Services.AddScoped<UserContext>();
-builder.Services.AddSingleton<IPasswordHasher<Vendor>, PasswordHasher<Vendor>>();
+builder.Services.AddSingleton<IPasswordHasher<AppSetting>, PasswordHasher<AppSetting>>();
+builder.Services.AddScoped<StaffAuthService>();
 
 builder.Services.AddScoped<StockService>();
 builder.Services.AddScoped<ReportService>();

@@ -5,7 +5,7 @@
     <p class="text-body-1 text-medium-emphasis mt-2">
       The page you're looking for doesn't exist.
     </p>
-    <v-btn to="/" color="primary" class="mt-6" prepend-icon="mdi-home">Back to scan</v-btn>
+    <v-btn to="/" color="primary" class="mt-6" prepend-icon="mdi-home">Back to home</v-btn>
   </v-container>
 </template>
 

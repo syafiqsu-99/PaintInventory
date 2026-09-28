@@ -29,12 +29,12 @@ The two are linked but decoupled: a coat *may* consume tracked stock, or may be 
 |---|---|---|
 | 1 | Number of coats — total or sequence? | **Both.** Item carries a total; each coat carries its position. |
 | 2 | Coat ↔ stock coupling via per‑coat "deduct from stock" toggle? | **Yes.** |
-| 3 | Track stock at subcontractor locations? | **Revised: receive + use.** Own store transfers to a vendor site (vendor must have `StoresStock`); the transfer stays *in transit* until the vendor confirms receipt by scan, then the vendor records usage against that balance. Own‑to‑own transfers stay instant. Paint a subcontractor sources itself remains inspection‑only. |
+| 3 | Track stock at subcontractor locations? | **Own locations only.** Subcontractor paint is usage/inspection‑only (no stock impact). Transfers credit the destination immediately. |
 | 4 | Report output format? | **PDF** (matching the Emerson standard form). |
 | — | Part A / Part B modelling | **Separate master rows** per component, linked by partner + mix ratio. |
 | — | Barcode | GTIN **lookup‑first**; Jotun tins carry only EAN‑13 (no 2D code). Batch/dates are read by the scanner's **OCR (trial)** into scan‑aware fields, always visible and editable. |
-| 5 | Vendor access | Vendors reach the app over **VPN / site‑to‑site**; IIS stays internal and is **not** exposed to the internet. |
-| 6 | Login | **Per‑site access code** (hashed with `PasswordHasher`), plus the operator's name typed at sign‑in and stamped on every transaction. Own‑company site → `Staff` role; other vendors → `Vendor` role (scan, receive, use, own stock level only). Cookie auth, 12 h sliding, login rate‑limited 5/min/IP. First staff login uses env var `Auth__BootstrapCode` — remove it once real codes are issued. |
+| 5 | Access model | **No sign‑in to open the app.** Everyone gets **scan‑only mode**: scan a tin and see its product details. Own‑company staff unlock everything else (stock, transfers, reports, products, locations, dashboard, settings) with **one shared staff password**; vendors don't have it, so they only ever scan. |
+| 6 | Staff password | Stored hashed (`PasswordHasher`) in `PaintInventory_AppSettings` and changed from **Settings → Security**. Until one is set, the machine env var `Auth__StaffPassword` is the password. Unlock issues a session cookie (ends when the browser closes; 12 h cap) with a manual **Lock** button; 5 unlock attempts/min/IP; attempts audited. |
 | 7 | Scanned dates | **Day‑first only** (`DD.MM.YYYY`, `DD/MM/YYYY`, `DD-MM-YYYY`, 2‑digit years → 20YY); month‑first is never guessed. Common OCR slips (O→0, I/l→1) corrected; impossible dates rejected, raw text kept. |
 | 8 | Product master | Modelled on the **Jotun / International** product data: brand, family, product type (Coating / Base / CuringAgent / Thinner / Cleaner), technology, category, colour + RAL, gloss, mix ratio, pot life, volume solids, VOC, DFT/WFT range, coverage, temperature resistance, shelf life, MSDS/TDS links. `Colour` replaces `DefaultShade`; `Manufacturer` is dropped (Brand covers it). |
 
@@ -71,11 +71,13 @@ All names carry the `PaintInventory_` prefix. Decimal precision: stock qty/volum
 
 Stock movements copy the product's **Colour** (falling back to RalCode) into `StockTransaction.Shade`.
 
-**`PaintInventory_Vendors`** — Name (unique), IsOwnCompany, StoresStock, DoesBlasting, DoesPainting, IsActive, CreatedAt, AccessCodeHash, AccessCodeUpdatedAt.
+**`PaintInventory_Vendors`** — Name (unique), IsOwnCompany, StoresStock, DoesBlasting, DoesPainting, IsActive, CreatedAt.
 
 **`PaintInventory_StockBalances`** — PaintProductId, VendorId, OnHandQty, ReorderLevel, UpdatedAt, RowVersion. Unique `(PaintProductId, VendorId)`.
 
-**`PaintInventory_StockTransactions`** — PaintProductId, VendorId, CounterpartyVendorId (transfers), Direction, Quantity, Batch, Shade, PackVolume, ManufacturingDate, BestBefore, Source, CoatLineId (link to consuming coat), Operator, Notes, DeviceId, Timestamp, ReceivedAt / ReceivedBy / ReceivedQty (transfer receipt; `ReceivedAt IS NULL` = in transit). Index `(CounterpartyVendorId, ReceivedAt)`.
+**`PaintInventory_StockTransactions`** — PaintProductId, VendorId, CounterpartyVendorId (transfers), Direction, Quantity, Batch, Shade, PackVolume, ManufacturingDate, BestBefore, Source, CoatLineId (link to consuming coat), Operator, Notes, DeviceId, Timestamp.
+
+**`PaintInventory_AppSettings`** — Key (PK, ≤100), Value, UpdatedAt. Holds `StaffPasswordHash`.
 
 **`PaintInventory_Reports`** — Ipo, Customer, Project, PreparedBy, PreparedDate, CreatedAt, UpdatedAt.
 
@@ -132,7 +134,11 @@ The 12 reporting fields map onto `CoatLine` (fields 2–12) with number‑of‑c
 - Raw reads are sent as `scanRaw` and stored in `AuditLog.Details` so OCR accuracy can be measured against saved values.
 - **Keyence setup (device, not code):** set the **Enter (CR) suffix for OCR reads as well as barcodes**, and use a day‑first date template.
 
-**Mobile‑first UI** — the BT‑A500GM browser is a small portrait screen: forms stack to one column below `sm`, the scan dialog and date picker go fullscreen on phones with actions pinned at the bottom, inputs are 16 px, vendors get a two‑tab bottom nav (Scan, Stock).
+**Mobile‑first UI** — the BT‑A500GM browser is a small portrait screen: forms stack to one column below `sm`, dialogs and the date picker go fullscreen on phones with actions pinned at the bottom, inputs are 16 px, app‑bar nav collapses to icons below `md`, and the footer hides on `xs`.
+
+**App shell (DCenter pattern)** — a full‑screen **boot overlay** (logo + spinner, retries `/api/health` 8× with back‑off, then a *Can't reach the server* card with **Retry**); a primary **app bar** (logo → Home, nav buttons Scan · Stock · Reports · Settings, staff lock button, thin navigation progress bar); page fade transitions; a primary **footer**. **Home** is a hero (logo, title, *Scan‑only mode* / *Staff access* chip) over a background image plus a grid of **module cards**; staff modules show a lock and open the unlock dialog, then continue to the module. Placeholder brand files live in `src/assets/` (`logo.svg`, `logo-no-bg.svg`, `home-bg.svg`) — replace them (and the import lines in `App.vue`, `HomeView.vue`, `HomeHero.vue` if the extension changes).
+
+**Scan modes** — locked: a scan opens a read‑only **Product details** sheet (brand, type, A/B partner, colour/RAL/gloss, pack, mix ratio, pot life, DFT/WFT, coverage, solids, VOC, thinner/cleaner, shelf life, UN number, hazard flags, TDS/SDS links). Unlocked: the scan opens the **Stock in / Stock out** form with the OCR batch/date fields, or product registration for an unknown GTIN.
 
 **Nice‑to‑have**
 - Supplier GS1‑128 / DataMatrix parsing (batch/expiry via AIs) where suppliers print 2D codes.
@@ -140,20 +146,20 @@ The 12 reporting fields map onto `CoatLine` (fields 2–12) with number‑of‑c
 
 ## 8. Screens & components (views = skeletons, components = UI)
 
-**Views:** StockInView, StockOutView, StockLevelView, TransferView, DashboardView, ProductMasterView, VendorView, ReportListView, ReportEditView, ReportPdfView, HistoryView, NotFoundView (catch‑all).
+**Views:** HomeView, ScanView, StockLevelView, TransferView, DashboardView, ProductsView, VendorsView (Locations), SettingsView (Products · Locations · Import/export · Preferences · Security), ReportListView, ReportEditView, NotFoundView (catch‑all).
 
-**Components:** BarcodeScanField, StockInForm, StockOutForm, StockTransferForm, StockLevelTable, StockLevelPreview, ProductForm/Dialog, VendorTable, ReportHeaderForm, SurfacePrepForm, CoatLineTable/CoatLineRow, TotalsFooter, QcTestsForm, TransactionHistoryTable, LowStockList, StatCard, UsageChart, RalSwatch.
+**Components:** home/HomeHero, home/HomeModules, common/StaffNavButton, common/StaffUnlockDialog, common/ScanTextField, common/ScanDateField, common/BarcodeScanField, scan/ScanConsole, scan/ScanDialog, scan/ProductDetailsDialog, scan/RecentScans, settings/StaffPasswordPanel, stock/*, products/*, reports/*, dashboard/*.
 
-**Stores:** `product`, `vendor`, `stock`, `report`, `refdata`. API on relative `/api` via the existing `http` wrapper + Vite proxy.
+**Stores:** `auth` (staff session: `isStaff`, unlock/lock, change password, pending route), `product`, `vendor`, `stock`, `inventory`, `report`, `settings`, `importExport`, `ui`. API on relative `/api` via the `http` wrapper + Vite proxy; a 401 marks the session locked and opens the unlock dialog.
 
 ## 9. API surface (planned)
 
 - `GET /api/products`, `GET /api/products/{gtin}` (scan lookup), `POST/PUT /api/products`
 - `GET /api/vendors`, `POST/PUT /api/vendors`
 - `GET /api/inventory` (levels, filter by vendor), `GET /api/inventory/low-stock`, `GET /api/inventory/{id}/history`, `GET /api/inventory/dashboard`, `GET /api/inventory/export`
-- `POST /api/stock/in`, `POST /api/stock/out`, `POST /api/stock/transfer`, `POST /api/stock/adjust`, `POST /api/stock/receive`, `GET /api/stock/in-transit`
-- `GET /api/auth/sites`, `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`; `PUT/DELETE /api/vendors/{id}/access-code` (staff)
-- Staff‑only: vendor/product writes, reports, import/export, dashboard, stock in/adjust/transfer, reorder, Excel export. Vendors are scoped server‑side to their own site regardless of the `vendorId` they send.
+- `POST /api/stock/in`, `POST /api/stock/out`, `POST /api/stock/transfer`, `POST /api/stock/adjust`
+- `GET /api/auth/me` → `{ isStaff, passwordConfigured }`, `POST /api/auth/unlock { password }`, `POST /api/auth/lock`, `PUT /api/auth/password { currentPassword, newPassword }` (staff)
+- **Staff‑only by default** (fallback authorization policy). Open to everyone: `/api/health`, `/api/auth/me|unlock|lock`, and product lookup `GET /api/products/{gtin}` / `by-id/{id}`.
 - `GET /api/reports`, `GET /api/reports/{id}`, `POST/PUT /api/reports`, `GET /api/reports/{id}/items/{itemId}/pdf`
 
 ## 10. PDF report
@@ -169,13 +175,13 @@ The Emerson form is a fixed‑grid document (logo, header block, blasting row, c
 3. Frontend shell: theme, router (+404), `http`, stores; then `BarcodeScanField`, Stock In/Out/Level.
 4. Coating reports: report/coat entry screens + validation; dew‑point + margin helpers.
 5. PDF generation (per‑item Emerson form); extend Excel export.
-6. Auth — **done:** per‑site access code + cookie (Windows/Negotiate dropped: vendors are not on the domain). Publish to IIS, readiness gate.
+6. Auth — **done:** open scan‑only mode + shared staff password (Windows/Negotiate dropped: vendors are not on the domain). Publish to IIS, readiness gate.
 
 ## 12. Deployment
 
-Single IIS site: ASP.NET Core serves the built Vue `dist/` as static files with SPA fallback; API under `/api`, same‑origin (no CORS). One app pool. Connection string from machine env var. Force HTTPS + HSTS (the auth cookie is `Secure`, so the site must be reached over HTTPS, including over the VPN).
+Single IIS site: ASP.NET Core serves the built Vue `dist/` as static files with SPA fallback; API under `/api`, same‑origin (no CORS). One app pool. Connection string from machine env var. Force HTTPS + HSTS (the staff cookie is `Secure`, so staff must reach the site over HTTPS).
 
-Machine env vars: `ConnectionStrings__DefaultConnection`; `Auth__BootstrapCode` only until the first own‑company site code is issued.
+Machine env vars: `ConnectionStrings__DefaultConnection`; `Auth__StaffPassword` — the staff password until one is set in Settings → Security (then it is ignored and can be removed).
 
 ## 13. Development
 

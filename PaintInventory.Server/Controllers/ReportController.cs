@@ -1,12 +1,9 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using PaintInventory.Server.Infrastructure;
+﻿using Microsoft.AspNetCore.Mvc;
 using PaintInventory.Server.Models;
 using PaintInventory.Server.Services;
 
 namespace PaintInventory.Server.Controllers;
 
-[Authorize(Policy = AuthConstants.StaffPolicy)]
 [ApiController]
 [Route("api/[controller]")]
 public sealed class ReportsController(ReportService reports, ReportPdfService pdf) : ControllerBase

@@ -1,45 +1,56 @@
 import { defineStore } from 'pinia'
-import { computed, ref } from 'vue'
+import { ref } from 'vue'
 import http from '@/utils/http'
 
 export const useAuthStore = defineStore('auth', () => {
-  const me = ref(null)
+  const isStaff = ref(false)
+  const passwordConfigured = ref(true)
   const loaded = ref(false)
-
-  const isAuthenticated = computed(() => !!me.value)
-  const isStaff = computed(() => me.value?.role === 'Staff')
-  const vendorId = computed(() => me.value?.vendorId ?? null)
+  const unlockOpen = ref(false)
+  const pendingPath = ref(null)
 
   async function load(force = false) {
-    if (loaded.value && !force) return me.value
-    try {
-      me.value = await http.get('/auth/me')
-    } catch (e) {
-      if (e.status !== 401) throw e
-      me.value = null
-    }
-    loaded.value = true
-    return me.value
-  }
-
-  function sites() {
-    return http.get('/auth/sites')
-  }
-
-  async function login(payload) {
-    me.value = await http.post('/auth/login', payload)
-    loaded.value = true
-    return me.value
-  }
-
-  async function logout() {
-    try { await http.post('/auth/logout') } finally { clear() }
-  }
-
-  function clear() {
-    me.value = null
+    if (loaded.value && !force) return
+    const me = await http.get('/auth/me')
+    isStaff.value = me.isStaff
+    passwordConfigured.value = me.passwordConfigured
     loaded.value = true
   }
 
-  return { me, loaded, isAuthenticated, isStaff, vendorId, load, sites, login, logout, clear }
+  async function unlock(password) {
+    await http.post('/auth/unlock', { password })
+    isStaff.value = true
+    unlockOpen.value = false
+    const next = pendingPath.value
+    pendingPath.value = null
+    return next
+  }
+
+  async function lock() {
+    try { await http.post('/auth/lock') } finally { isStaff.value = false }
+  }
+
+  function changePassword(currentPassword, newPassword) {
+    return http.put('/auth/password', { currentPassword, newPassword })
+  }
+
+  function requestUnlock(path = null) {
+    pendingPath.value = path
+    unlockOpen.value = true
+  }
+
+  function cancelUnlock() {
+    pendingPath.value = null
+    unlockOpen.value = false
+  }
+
+  function onDenied() {
+    isStaff.value = false
+    unlockOpen.value = true
+  }
+
+  return {
+    isStaff, passwordConfigured, loaded, unlockOpen, pendingPath,
+    load, unlock, lock, changePassword, requestUnlock, cancelUnlock, onDenied
+  }
 })

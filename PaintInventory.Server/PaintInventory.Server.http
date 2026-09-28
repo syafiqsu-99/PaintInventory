@@ -1,31 +1,25 @@
 @host = https://localhost:7056
 
-### Sites offered on the login screen
-GET {{host}}/api/auth/sites
-
-### Staff sign-in with the bootstrap code (env var Auth__BootstrapCode)
-POST {{host}}/api/auth/login
-Content-Type: application/json
-
-{ "vendorId": 0, "accessCode": "{{$processEnv Auth__BootstrapCode}}", "operatorName": "Admin" }
-
-### Current session
+### Staff session status (open to everyone)
 GET {{host}}/api/auth/me
 
-### Issue an access code for a vendor site (staff)
-PUT {{host}}/api/vendors/3/access-code
+### Unlock staff access (password from Settings, or env var Auth__StaffPassword until one is set)
+POST {{host}}/api/auth/unlock
 Content-Type: application/json
 
-{ "accessCode": null }
+{ "password": "{{$processEnv Auth__StaffPassword}}" }
 
-### Paint on its way to vendor sites
-GET {{host}}/api/stock/in-transit
-
-### Confirm receipt of a transfer (vendor)
-POST {{host}}/api/stock/receive
+### Change the staff password (staff only)
+PUT {{host}}/api/auth/password
 Content-Type: application/json
 
-{ "transactionId": 1, "receivedQty": 5, "batch": "B1", "notes": null, "scanRaw": { "batch": "B/N B1" } }
+{ "currentPassword": "{{$processEnv Auth__StaffPassword}}", "newPassword": "change-me-123" }
 
-### Sign out
-POST {{host}}/api/auth/logout
+### Product lookup by barcode (open to everyone)
+GET {{host}}/api/products/7020000000001
+
+### Stock levels (staff only)
+GET {{host}}/api/inventory
+
+### Lock again
+POST {{host}}/api/auth/lock

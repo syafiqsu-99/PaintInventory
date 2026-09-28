@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="Paint Inventory">
+  <rect width="96" height="96" rx="20" fill="#1565C0"/>
+  <path d="M26 34h44v36a8 8 0 0 1-8 8H34a8 8 0 0 1-8-8z" fill="#ffffff"/>
+  <rect x="22" y="26" width="52" height="10" rx="5" fill="#BBDEFB"/>
+  <path d="M26 46h44v10H26z" fill="#FFB300"/>
+  <path d="M60 46v10c0 6 4 7 4 12a4 4 0 0 1-8 0c0-3 2-4 2-8" fill="#FFB300"/>
+  <path d="M36 26c0-8 24-8 24 0" fill="none" stroke="#BBDEFB" stroke-width="4" stroke-linecap="round"/>
+</svg>
