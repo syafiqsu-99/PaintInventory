@@ -44,25 +44,8 @@ public sealed class ProductsController(PaintInventoryDbContext db) : ControllerB
         if (await db.PaintProducts.AnyAsync(p => p.Gtin == req.Gtin, ct))
             return Conflict(new { error = $"GTIN '{req.Gtin}' is already registered." });
 
-        var product = new PaintProduct
-        {
-            Gtin = req.Gtin,
-            ItemCode = req.ItemCode,
-            ProductName = req.ProductName,
-            Description = req.Description,
-            Component = req.Component,
-            PackVolume = req.PackVolume,
-            Unit = req.Unit,
-            DefaultShade = req.DefaultShade,
-            RalCode = req.RalCode,
-            Manufacturer = req.Manufacturer,
-            MixRatio = req.MixRatio,
-            PartnerProductId = req.PartnerProductId,
-            UnNumber = req.UnNumber,
-            HazardFlags = req.HazardFlags,
-            TracksExpiry = req.TracksExpiry,
-            CreatedAt = DateTime.UtcNow
-        };
+        var product = new PaintProduct { Gtin = req.Gtin, CreatedAt = DateTime.UtcNow };
+        Apply(product, req);
 
         db.PaintProducts.Add(product);
         await db.SaveChangesAsync(ct);
@@ -84,21 +67,7 @@ public sealed class ProductsController(PaintInventoryDbContext db) : ControllerB
         if (product.Gtin != req.Gtin && await db.PaintProducts.AnyAsync(p => p.Gtin == req.Gtin && p.Id != id, ct))
             return Conflict(new { error = $"GTIN '{req.Gtin}' is already registered." });
 
-        product.Gtin = req.Gtin;
-        product.ItemCode = req.ItemCode;
-        product.ProductName = req.ProductName;
-        product.Description = req.Description;
-        product.Component = req.Component;
-        product.PackVolume = req.PackVolume;
-        product.Unit = req.Unit;
-        product.DefaultShade = req.DefaultShade;
-        product.RalCode = req.RalCode;
-        product.Manufacturer = req.Manufacturer;
-        product.MixRatio = req.MixRatio;
-        product.PartnerProductId = req.PartnerProductId;
-        product.UnNumber = req.UnNumber;
-        product.HazardFlags = req.HazardFlags;
-        product.TracksExpiry = req.TracksExpiry;
+        Apply(product, req);
         product.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync(ct);
@@ -123,6 +92,46 @@ public sealed class ProductsController(PaintInventoryDbContext db) : ControllerB
         return NoContent();
     }
 
+    private static void Apply(PaintProduct p, ProductRequest req)
+    {
+        p.Gtin = req.Gtin;
+        p.ItemCode = req.ItemCode;
+        p.ProductName = req.ProductName;
+        p.Description = req.Description;
+        p.Brand = req.Brand;
+        p.ProductFamily = req.ProductFamily;
+        p.ProductType = req.ProductType;
+        p.Component = req.Component;
+        p.PackVolume = req.PackVolume;
+        p.Unit = req.Unit;
+        p.Technology = req.Technology;
+        p.Category = req.Category;
+        p.SubCategory = req.SubCategory;
+        p.Colour = req.Colour;
+        p.RalCode = req.RalCode;
+        p.GlossLevel = req.GlossLevel;
+        p.MixRatio = req.MixRatio;
+        p.PotLifeMinutes = req.PotLifeMinutes;
+        p.ThinnerProductId = req.ThinnerProductId;
+        p.CleanerProductId = req.CleanerProductId;
+        p.VolumeSolidsPct = req.VolumeSolidsPct;
+        p.VocGramsPerLitre = req.VocGramsPerLitre;
+        p.DftMinUm = req.DftMinUm;
+        p.DftMaxUm = req.DftMaxUm;
+        p.WftMinUm = req.WftMinUm;
+        p.WftMaxUm = req.WftMaxUm;
+        p.CoverageMinM2L = req.CoverageMinM2L;
+        p.CoverageMaxM2L = req.CoverageMaxM2L;
+        p.TemperatureResistance = req.TemperatureResistance;
+        p.ShelfLifeMonths = req.ShelfLifeMonths;
+        p.PartnerProductId = req.PartnerProductId;
+        p.UnNumber = req.UnNumber;
+        p.HazardFlags = req.HazardFlags;
+        p.MsdsUrl = req.MsdsUrl;
+        p.TdsUrl = req.TdsUrl;
+        p.TracksExpiry = req.TracksExpiry;
+    }
+
     private async Task LinkPartnerAsync(int productId, int partnerId, CancellationToken ct)
     {
         var partner = await db.PaintProducts.FirstOrDefaultAsync(p => p.Id == partnerId, ct);
@@ -135,8 +144,17 @@ public sealed class ProductsController(PaintInventoryDbContext db) : ControllerB
 
     private static IQueryable<ProductDto> Project(IQueryable<PaintProduct> q) =>
         q.Select(p => new ProductDto(
-            p.Id, p.Gtin, p.ItemCode, p.ProductName, p.Description, p.Component,
-            p.PackVolume, p.Unit, p.DefaultShade, p.RalCode, p.Manufacturer, p.MixRatio,
+            p.Id, p.Gtin, p.ItemCode, p.ProductName, p.Description,
+            p.Brand, p.ProductFamily, p.ProductType, p.Component,
+            p.PackVolume, p.Unit,
+            p.Technology, p.Category, p.SubCategory, p.Colour, p.RalCode, p.GlossLevel,
+            p.MixRatio, p.PotLifeMinutes,
+            p.ThinnerProductId, p.ThinnerProduct != null ? p.ThinnerProduct.ProductName : null,
+            p.CleanerProductId, p.CleanerProduct != null ? p.CleanerProduct.ProductName : null,
+            p.VolumeSolidsPct, p.VocGramsPerLitre,
+            p.DftMinUm, p.DftMaxUm, p.WftMinUm, p.WftMaxUm, p.CoverageMinM2L, p.CoverageMaxM2L,
+            p.TemperatureResistance, p.ShelfLifeMonths,
             p.PartnerProductId, p.PartnerProduct != null ? p.PartnerProduct.ProductName : null,
-            p.UnNumber, p.HazardFlags, p.TracksExpiry, p.IsActive, p.CreatedAt, p.UpdatedAt));
+            p.UnNumber, p.HazardFlags, p.MsdsUrl, p.TdsUrl,
+            p.TracksExpiry, p.IsActive, p.CreatedAt, p.UpdatedAt));
 }

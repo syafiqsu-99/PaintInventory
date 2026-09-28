@@ -150,7 +150,7 @@ public sealed class InventoryController(PaintInventoryDbContext db) : Controller
 
         return ordered.Select(b => new InventoryLevelDto(
             b.Id, b.PaintProductId, b.PaintProduct.Gtin, b.PaintProduct.ProductName, b.PaintProduct.Component,
-            b.PaintProduct.DefaultShade ?? b.PaintProduct.RalCode, b.PaintProduct.Unit,
+            b.PaintProduct.Colour ?? b.PaintProduct.RalCode, b.PaintProduct.Unit,
             b.VendorId, b.Vendor.Name, b.OnHandQty, b.ReorderLevel,
             b.ReorderLevel != null && b.OnHandQty <= b.ReorderLevel, b.UpdatedAt));
     }

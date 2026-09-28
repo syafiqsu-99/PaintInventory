@@ -99,7 +99,7 @@
 
   function applyProduct(product) {
       resolved.value = product
-      form.value.shade = product.defaultShade ?? product.ralCode ?? null
+      form.value.shade = product.colour ?? product.ralCode ?? null
       form.value.packVolume = product.packVolume ?? null
   }
 

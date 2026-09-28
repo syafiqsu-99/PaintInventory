@@ -29,3 +29,27 @@ public enum AdhesionTestType
     TestPlate = 1,
     ProductionPart = 2
 }
+
+public enum Brand
+{
+    Jotun = 0,
+    International = 1
+}
+
+public enum ProductType
+{
+    Coating = 0,
+    Base = 1,
+    CuringAgent = 2,
+    Thinner = 3,
+    Cleaner = 4
+}
+
+public enum GlossLevel
+{
+    Matt = 0,
+    Eggshell = 1,
+    SemiGloss = 2,
+    Gloss = 3,
+    FullGloss = 4
+}

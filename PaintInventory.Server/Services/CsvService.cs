@@ -10,9 +10,13 @@ public sealed class CsvService(PaintInventoryDbContext db)
 {
     public static readonly string[] ProductColumns =
     [
-        "Gtin", "ItemCode", "ProductName", "Description", "Component", "PackVolume",
-        "Unit", "DefaultShade", "RalCode", "Manufacturer", "MixRatio",
-        "UnNumber", "HazardFlags", "TracksExpiry"
+        "Gtin", "ItemCode", "ProductName", "Description", "Brand", "ProductFamily",
+        "ProductType", "Component", "PackVolume", "Unit",
+        "Technology", "Category", "SubCategory", "Colour", "RalCode", "GlossLevel",
+        "MixRatio", "PotLifeMinutes", "VolumeSolidsPct", "VocGramsPerLitre",
+        "DftMinUm", "DftMaxUm", "WftMinUm", "WftMaxUm", "CoverageMinM2L", "CoverageMaxM2L",
+        "TemperatureResistance", "ShelfLifeMonths", "UnNumber", "HazardFlags",
+        "MsdsUrl", "TdsUrl", "TracksExpiry"
     ];
 
     public static readonly string[] VendorColumns =
@@ -27,10 +31,27 @@ public sealed class CsvService(PaintInventoryDbContext db)
             .OrderBy(p => p.ProductName)
             .Select(p => new[]
             {
-                p.Gtin, p.ItemCode ?? "", p.ProductName, p.Description ?? "", p.Component.ToString(),
+                p.Gtin, p.ItemCode ?? "", p.ProductName, p.Description ?? "",
+                p.Brand.ToString(), p.ProductFamily ?? "",
+                p.ProductType.ToString(), p.Component.ToString(),
                 p.PackVolume.HasValue ? p.PackVolume.Value.ToString(CultureInfo.InvariantCulture) : "",
-                p.Unit ?? "", p.DefaultShade ?? "", p.RalCode ?? "", p.Manufacturer ?? "", p.MixRatio ?? "",
-                p.UnNumber ?? "", p.HazardFlags ?? "", p.TracksExpiry ? "true" : "false"
+                p.Unit ?? "",
+                p.Technology ?? "", p.Category ?? "", p.SubCategory ?? "", p.Colour ?? "", p.RalCode ?? "",
+                p.GlossLevel.HasValue ? p.GlossLevel.Value.ToString() : "",
+                p.MixRatio ?? "",
+                p.PotLifeMinutes.HasValue ? p.PotLifeMinutes.Value.ToString(CultureInfo.InvariantCulture) : "",
+                p.VolumeSolidsPct.HasValue ? p.VolumeSolidsPct.Value.ToString(CultureInfo.InvariantCulture) : "",
+                p.VocGramsPerLitre.HasValue ? p.VocGramsPerLitre.Value.ToString(CultureInfo.InvariantCulture) : "",
+                p.DftMinUm.HasValue ? p.DftMinUm.Value.ToString(CultureInfo.InvariantCulture) : "",
+                p.DftMaxUm.HasValue ? p.DftMaxUm.Value.ToString(CultureInfo.InvariantCulture) : "",
+                p.WftMinUm.HasValue ? p.WftMinUm.Value.ToString(CultureInfo.InvariantCulture) : "",
+                p.WftMaxUm.HasValue ? p.WftMaxUm.Value.ToString(CultureInfo.InvariantCulture) : "",
+                p.CoverageMinM2L.HasValue ? p.CoverageMinM2L.Value.ToString(CultureInfo.InvariantCulture) : "",
+                p.CoverageMaxM2L.HasValue ? p.CoverageMaxM2L.Value.ToString(CultureInfo.InvariantCulture) : "",
+                p.TemperatureResistance ?? "",
+                p.ShelfLifeMonths.HasValue ? p.ShelfLifeMonths.Value.ToString(CultureInfo.InvariantCulture) : "",
+                p.UnNumber ?? "", p.HazardFlags ?? "", p.MsdsUrl ?? "", p.TdsUrl ?? "",
+                p.TracksExpiry ? "true" : "false"
             })
             .ToListAsync(ct);
 
@@ -109,7 +130,7 @@ public sealed class CsvService(PaintInventoryDbContext db)
     }
 
     private static (ImportRowStatus, string?) ValidateProductRow(
-        IReadOnlyDictionary<string, string?> v, HashSet<string> existing, HashSet<string> seen)
+    IReadOnlyDictionary<string, string?> v, HashSet<string> existing, HashSet<string> seen)
     {
         var gtin = v["Gtin"]?.Trim();
         var name = v["ProductName"]?.Trim();
@@ -120,6 +141,18 @@ public sealed class CsvService(PaintInventoryDbContext db)
         var component = v["Component"]?.Trim();
         if (!string.IsNullOrWhiteSpace(component) && !Enum.TryParse<ComponentType>(component, true, out _))
             return (ImportRowStatus.Invalid, $"Component '{component}' must be Single, PartA or PartB.");
+
+        var brand = v["Brand"]?.Trim();
+        if (!string.IsNullOrWhiteSpace(brand) && !Enum.TryParse<Brand>(brand, true, out _))
+            return (ImportRowStatus.Invalid, $"Brand '{brand}' must be Jotun or International.");
+
+        var type = v["ProductType"]?.Trim();
+        if (!string.IsNullOrWhiteSpace(type) && !Enum.TryParse<ProductType>(type, true, out _))
+            return (ImportRowStatus.Invalid, $"Product type '{type}' is not recognised.");
+
+        var gloss = v["GlossLevel"]?.Trim();
+        if (!string.IsNullOrWhiteSpace(gloss) && !Enum.TryParse<GlossLevel>(gloss, true, out _))
+            return (ImportRowStatus.Invalid, $"Gloss level '{gloss}' is not recognised.");
 
         var pack = v["PackVolume"]?.Trim();
         if (!string.IsNullOrWhiteSpace(pack) &&
@@ -139,15 +172,34 @@ public sealed class CsvService(PaintInventoryDbContext db)
         p.ItemCode = Blank(v["ItemCode"]);
         p.ProductName = v["ProductName"]!.Trim();
         p.Description = Blank(v["Description"]);
+        p.Brand = Enum.TryParse<Brand>(v["Brand"]?.Trim(), true, out var b) ? b : Brand.Jotun;
+        p.ProductFamily = Blank(v["ProductFamily"]);
+        p.ProductType = Enum.TryParse<ProductType>(v["ProductType"]?.Trim(), true, out var pt) ? pt : ProductType.Coating;
         p.Component = Enum.TryParse<ComponentType>(v["Component"]?.Trim(), true, out var c) ? c : ComponentType.Single;
         p.PackVolume = ParseDecimal(v["PackVolume"]);
         p.Unit = Blank(v["Unit"]);
-        p.DefaultShade = Blank(v["DefaultShade"]);
+        p.Technology = Blank(v["Technology"]);
+        p.Category = Blank(v["Category"]);
+        p.SubCategory = Blank(v["SubCategory"]);
+        p.Colour = Blank(v["Colour"]);
         p.RalCode = Blank(v["RalCode"]);
-        p.Manufacturer = Blank(v["Manufacturer"]);
+        p.GlossLevel = Enum.TryParse<GlossLevel>(v["GlossLevel"]?.Trim(), true, out var g) ? g : null;
         p.MixRatio = Blank(v["MixRatio"]);
+        p.PotLifeMinutes = ParseInt(v["PotLifeMinutes"]);
+        p.VolumeSolidsPct = ParseDecimal(v["VolumeSolidsPct"]);
+        p.VocGramsPerLitre = ParseDecimal(v["VocGramsPerLitre"]);
+        p.DftMinUm = ParseInt(v["DftMinUm"]);
+        p.DftMaxUm = ParseInt(v["DftMaxUm"]);
+        p.WftMinUm = ParseInt(v["WftMinUm"]);
+        p.WftMaxUm = ParseInt(v["WftMaxUm"]);
+        p.CoverageMinM2L = ParseDecimal(v["CoverageMinM2L"]);
+        p.CoverageMaxM2L = ParseDecimal(v["CoverageMaxM2L"]);
+        p.TemperatureResistance = Blank(v["TemperatureResistance"]);
+        p.ShelfLifeMonths = ParseInt(v["ShelfLifeMonths"]);
         p.UnNumber = Blank(v["UnNumber"]);
         p.HazardFlags = Blank(v["HazardFlags"]);
+        p.MsdsUrl = Blank(v["MsdsUrl"]);
+        p.TdsUrl = Blank(v["TdsUrl"]);
         p.TracksExpiry = ParseBool(v["TracksExpiry"]);
     }
 
@@ -241,6 +293,9 @@ public sealed class CsvService(PaintInventoryDbContext db)
 
     private static decimal? ParseDecimal(string? s) =>
         decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out var d) ? d : null;
+
+    private static int? ParseInt(string? s) =>
+        int.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out var i) ? i : null;
 
     private static bool ParseBool(string? s) =>
         s?.Trim().ToLowerInvariant() is "true" or "1" or "yes" or "y";

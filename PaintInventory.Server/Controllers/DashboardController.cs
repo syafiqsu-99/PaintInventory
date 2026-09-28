@@ -89,7 +89,7 @@ public sealed class DashboardController(PaintInventoryDbContext db) : Controller
             .OrderBy(b => b.OnHandQty)
             .Select(b => new InventoryLevelDto(
                 b.Id, b.PaintProductId, b.PaintProduct.Gtin, b.PaintProduct.ProductName, b.PaintProduct.Component,
-                b.PaintProduct.DefaultShade ?? b.PaintProduct.RalCode, b.PaintProduct.Unit,
+                b.PaintProduct.Colour ?? b.PaintProduct.RalCode, b.PaintProduct.Unit,
                 b.VendorId, b.Vendor.Name, b.OnHandQty, b.ReorderLevel, true, b.UpdatedAt))
             .Take(50)
             .ToListAsync(ct);

@@ -67,7 +67,7 @@
     { title: 'Product', key: 'productName' },
     { title: 'Component', key: 'component' },
     { title: 'Pack', key: 'packVolume', align: 'end' },
-    { title: 'Manufacturer', key: 'manufacturer' },
+    { title: 'Brand', key: 'brand' },
     { title: 'Expiry', key: 'tracksExpiry', align: 'center', sortable: false },
     { title: '', key: 'actions', sortable: false, align: 'end' }
   ]

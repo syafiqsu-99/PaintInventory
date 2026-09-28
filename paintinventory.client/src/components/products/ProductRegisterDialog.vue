@@ -24,13 +24,18 @@
               <v-text-field v-model="form.unit" label="Unit" variant="outlined" density="comfortable" />
             </v-col>
             <v-col cols="12" sm="6">
-              <v-text-field v-model="form.defaultShade" label="Shade / colour" variant="outlined" density="comfortable" />
-            </v-col>
-            <v-col cols="12" sm="6">
               <v-text-field v-model="form.ralCode" label="RAL code" variant="outlined" density="comfortable" />
             </v-col>
             <v-col cols="12" sm="6">
-              <v-text-field v-model="form.manufacturer" label="Manufacturer" variant="outlined" density="comfortable" />
+              <v-text-field v-model="form.colour" label="Colour" variant="outlined" density="comfortable" />
+            </v-col>
+            <v-col cols="12" sm="3">
+              <v-select v-model="form.brand" :items="['Jotun', 'International']" label="Brand" variant="outlined" density="comfortable" />
+            </v-col>
+            <v-col cols="12" sm="3">
+              <v-select v-model="form.productType"
+                        :items="[{ title: 'Coating', value: 'Coating' }, { title: 'Base', value: 'Base' }, { title: 'Curing agent', value: 'CuringAgent' }, { title: 'Thinner', value: 'Thinner' }, { title: 'Cleaner', value: 'Cleaner' }]"
+                        label="Type" variant="outlined" density="comfortable" />
             </v-col>
             <v-col cols="6" sm="3">
               <v-text-field v-model="form.mixRatio" label="Mix ratio A:B" variant="outlined" density="comfortable" />
@@ -80,8 +85,8 @@
   function blank() {
       return {
         gtin: '', itemCode: null, productName: '', description: null,
-        component: 'Single', packVolume: null, unit: 'L', defaultShade: null,
-        ralCode: null, manufacturer: null, mixRatio: null, partnerProductId: null,
+        component: 'Single', packVolume: null, unit: 'L', brand: 'Jotun', productType: 'Coating', colour: null,
+        ralCode: null, mixRatio: null, partnerProductId: null,
         unNumber: null, hazardFlags: null, tracksExpiry: false
       }
   }

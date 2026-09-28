@@ -31,11 +31,27 @@ public class PaintInventoryDbContext(DbContextOptions<PaintInventoryDbContext> o
         modelBuilder.Entity<PaintProduct>(e =>
         {
             e.HasIndex(p => p.Gtin).IsUnique();
+            e.HasIndex(p => p.Brand);
+            e.HasIndex(p => p.ProductType);
             e.Property(p => p.PackVolume).HasPrecision(18, 2);
+            e.Property(p => p.VolumeSolidsPct).HasPrecision(5, 2);
+            e.Property(p => p.VocGramsPerLitre).HasPrecision(7, 2);
+            e.Property(p => p.CoverageMinM2L).HasPrecision(7, 2);
+            e.Property(p => p.CoverageMaxM2L).HasPrecision(7, 2);
 
             e.HasOne(p => p.PartnerProduct)
                 .WithMany()
                 .HasForeignKey(p => p.PartnerProductId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            e.HasOne(p => p.ThinnerProduct)
+                .WithMany()
+                .HasForeignKey(p => p.ThinnerProductId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            e.HasOne(p => p.CleanerProduct)
+                .WithMany()
+                .HasForeignKey(p => p.CleanerProductId)
                 .OnDelete(DeleteBehavior.NoAction);
         });
 
