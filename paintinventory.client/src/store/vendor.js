@@ -27,5 +27,13 @@ export const useVendorStore = defineStore('vendor', () => {
     return http.del(`/vendors/${id}`)
   }
 
-  return { vendors, loading, load, create, update, deactivate }
+  function setAccessCode(id, accessCode = null) {
+    return http.put(`/vendors/${id}/access-code`, { accessCode })
+  }
+
+  function revokeAccessCode(id) {
+    return http.del(`/vendors/${id}/access-code`)
+  }
+
+  return { vendors, loading, load, create, update, deactivate, setAccessCode, revokeAccessCode }
 })

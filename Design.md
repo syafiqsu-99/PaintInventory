@@ -29,10 +29,13 @@ The two are linked but decoupled: a coat *may* consume tracked stock, or may be 
 |---|---|---|
 | 1 | Number of coats — total or sequence? | **Both.** Item carries a total; each coat carries its position. |
 | 2 | Coat ↔ stock coupling via per‑coat "deduct from stock" toggle? | **Yes.** |
-| 3 | Track stock at subcontractor locations? | **Own locations only.** Subcontractor paint is usage/inspection‑only (no stock impact). |
+| 3 | Track stock at subcontractor locations? | **Revised: receive + use.** Own store transfers to a vendor site (vendor must have `StoresStock`); the transfer stays *in transit* until the vendor confirms receipt by scan, then the vendor records usage against that balance. Own‑to‑own transfers stay instant. Paint a subcontractor sources itself remains inspection‑only. |
 | 4 | Report output format? | **PDF** (matching the Emerson standard form). |
 | — | Part A / Part B modelling | **Separate master rows** per component, linked by partner + mix ratio. |
-| — | Barcode | GTIN **lookup‑first**; Jotun tins carry only EAN‑13 (no 2D code), so batch/dates are manual at Stock In. |
+| — | Barcode | GTIN **lookup‑first**; Jotun tins carry only EAN‑13 (no 2D code). Batch/dates are read by the scanner's **OCR (trial)** into scan‑aware fields, always visible and editable. |
+| 5 | Vendor access | Vendors reach the app over **VPN / site‑to‑site**; IIS stays internal and is **not** exposed to the internet. |
+| 6 | Login | **Per‑site access code** (hashed with `PasswordHasher`), plus the operator's name typed at sign‑in and stamped on every transaction. Own‑company site → `Staff` role; other vendors → `Vendor` role (scan, receive, use, own stock level only). Cookie auth, 12 h sliding, login rate‑limited 5/min/IP. First staff login uses env var `Auth__BootstrapCode` — remove it once real codes are issued. |
+| 7 | Scanned dates | **Day‑first only** (`DD.MM.YYYY`, `DD/MM/YYYY`, `DD-MM-YYYY`, 2‑digit years → 20YY); month‑first is never guessed. Common OCR slips (O→0, I/l→1) corrected; impossible dates rejected, raw text kept. |
 
 ## 4. Domain model — the grains
 
@@ -55,11 +58,11 @@ All names carry the `PaintInventory_` prefix. Decimal precision: stock qty/volum
 
 **`PaintInventory_Products`** — Gtin (unique), ItemCode, ProductName, Description, Component (Single/PartA/PartB), PackVolume, Unit, DefaultShade, RalCode, Manufacturer, MixRatio, PartnerProductId (self‑FK), UnNumber, HazardFlags, TracksExpiry, IsActive, CreatedAt, UpdatedAt.
 
-**`PaintInventory_Vendors`** — Name (unique), IsOwnCompany, StoresStock, DoesBlasting, DoesPainting, IsActive, CreatedAt.
+**`PaintInventory_Vendors`** — Name (unique), IsOwnCompany, StoresStock, DoesBlasting, DoesPainting, IsActive, CreatedAt, AccessCodeHash, AccessCodeUpdatedAt.
 
 **`PaintInventory_StockBalances`** — PaintProductId, VendorId, OnHandQty, ReorderLevel, UpdatedAt, RowVersion. Unique `(PaintProductId, VendorId)`.
 
-**`PaintInventory_StockTransactions`** — PaintProductId, VendorId, CounterpartyVendorId (transfers), Direction, Quantity, Batch, Shade, PackVolume, ManufacturingDate, BestBefore, Source, CoatLineId (link to consuming coat), Operator, Notes, DeviceId, Timestamp.
+**`PaintInventory_StockTransactions`** — PaintProductId, VendorId, CounterpartyVendorId (transfers), Direction, Quantity, Batch, Shade, PackVolume, ManufacturingDate, BestBefore, Source, CoatLineId (link to consuming coat), Operator, Notes, DeviceId, Timestamp, ReceivedAt / ReceivedBy / ReceivedQty (transfer receipt; `ReceivedAt IS NULL` = in transit). Index `(CounterpartyVendorId, ReceivedAt)`.
 
 **`PaintInventory_Reports`** — Ipo, Customer, Project, PreparedBy, PreparedDate, CreatedAt, UpdatedAt.
 
@@ -110,6 +113,14 @@ The 12 reporting fields map onto `CoatLine` (fields 2–12) with number‑of‑c
 - Measured‑vs‑required thickness compliance flag.
 - Best‑before / shelf‑life alerts (captured at Stock In).
 
+**Scanner entry (OCR trial)**
+- `ScanTextField` / `ScanDateField` accept keyboard‑wedge reads: Enter cleans the read (strips `BATCH:`/`LOT`/`B/N` prefixes, parses dates to ISO), shows a *Check* chip with the raw read, and moves focus to the next scan field so one sweep fills batch → mfg → best before.
+- The soft keyboard stays hidden on scan fields (`inputmode="none"`); the keyboard icon switches a field to manual typing. The *OCR trial* preference turns all of this off.
+- Raw reads are sent as `scanRaw` and stored in `AuditLog.Details` so OCR accuracy can be measured against saved values.
+- **Keyence setup (device, not code):** set the **Enter (CR) suffix for OCR reads as well as barcodes**, and use a day‑first date template.
+
+**Mobile‑first UI** — the BT‑A500GM browser is a small portrait screen: forms stack to one column below `sm`, the scan dialog and date picker go fullscreen on phones with actions pinned at the bottom, inputs are 16 px, vendors get a two‑tab bottom nav (Scan, Stock).
+
 **Nice‑to‑have**
 - Supplier GS1‑128 / DataMatrix parsing (batch/expiry via AIs) where suppliers print 2D codes.
 - Label/QR printing; email/Teams reorder alerts; RAL swatch rendering.
@@ -127,7 +138,9 @@ The 12 reporting fields map onto `CoatLine` (fields 2–12) with number‑of‑c
 - `GET /api/products`, `GET /api/products/{gtin}` (scan lookup), `POST/PUT /api/products`
 - `GET /api/vendors`, `POST/PUT /api/vendors`
 - `GET /api/inventory` (levels, filter by vendor), `GET /api/inventory/low-stock`, `GET /api/inventory/{id}/history`, `GET /api/inventory/dashboard`, `GET /api/inventory/export`
-- `POST /api/stock/in`, `POST /api/stock/out`, `POST /api/stock/transfer`, `POST /api/stock/adjust`
+- `POST /api/stock/in`, `POST /api/stock/out`, `POST /api/stock/transfer`, `POST /api/stock/adjust`, `POST /api/stock/receive`, `GET /api/stock/in-transit`
+- `GET /api/auth/sites`, `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`; `PUT/DELETE /api/vendors/{id}/access-code` (staff)
+- Staff‑only: vendor/product writes, reports, import/export, dashboard, stock in/adjust/transfer, reorder, Excel export. Vendors are scoped server‑side to their own site regardless of the `vendorId` they send.
 - `GET /api/reports`, `GET /api/reports/{id}`, `POST/PUT /api/reports`, `GET /api/reports/{id}/items/{itemId}/pdf`
 
 ## 10. PDF report
@@ -143,15 +156,16 @@ The Emerson form is a fixed‑grid document (logo, header block, blasting row, c
 3. Frontend shell: theme, router (+404), `http`, stores; then `BarcodeScanField`, Stock In/Out/Level.
 4. Coating reports: report/coat entry screens + validation; dew‑point + margin helpers.
 5. PDF generation (per‑item Emerson form); extend Excel export.
-6. Auth (Windows/Negotiate — confirm Keyence browser passes NTLM), publish to IIS, readiness gate.
+6. Auth — **done:** per‑site access code + cookie (Windows/Negotiate dropped: vendors are not on the domain). Publish to IIS, readiness gate.
 
 ## 12. Deployment
 
-Single IIS site: ASP.NET Core serves the built Vue `dist/` as static files with SPA fallback; API under `/api`, same‑origin (no CORS). One app pool. Connection string from machine env var. Force HTTPS + HSTS.
+Single IIS site: ASP.NET Core serves the built Vue `dist/` as static files with SPA fallback; API under `/api`, same‑origin (no CORS). One app pool. Connection string from machine env var. Force HTTPS + HSTS (the auth cookie is `Secure`, so the site must be reached over HTTPS, including over the VPN).
+
+Machine env vars: `ConnectionStrings__DefaultConnection`; `Auth__BootstrapCode` only until the first own‑company site code is issued.
 
 ## 13. Open items
 
-- Confirm auth mechanism (Windows/Negotiate vs cookie) and whether the Keyence enterprise browser passes NTLM.
 - PDF library licensing decision (§10).
 - Whether "number of coats" should hard‑cap at 4 or allow stripe/extra coats (currently modelled Primer→4th; extensible).
 - Grade‑of‑cleanliness and roughness: free‑text now, or a managed reference list?

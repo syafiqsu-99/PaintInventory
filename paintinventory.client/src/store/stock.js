@@ -18,5 +18,13 @@ export const useStockStore = defineStore('stock', () => {
     return http.post('/stock/transfer', payload)
   }
 
-  return { stockIn, stockOut, adjust, transfer }
+  function receive(payload) {
+    return http.post('/stock/receive', payload)
+  }
+
+  function inTransit(vendorId = null) {
+    return http.get(vendorId ? `/stock/in-transit?vendorId=${vendorId}` : '/stock/in-transit')
+  }
+
+  return { stockIn, stockOut, adjust, transfer, receive, inTransit }
 })

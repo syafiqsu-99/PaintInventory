@@ -1,6 +1,6 @@
 <template>
   <v-container fluid>
-    <v-row class="mb-2" align="center">
+    <v-row v-if="isStaff" class="mb-2" align="center">
       <v-col cols="12" sm="4">
         <v-select v-model="vendorId"
                   :items="locationItems"
@@ -26,12 +26,14 @@
     import { storeToRefs } from 'pinia'
     import { useInventoryStore } from '@/store/inventory'
     import { useVendorStore } from '@/store/vendor'
+    import { useAuthStore } from '@/store/auth'
     import StockLevelTable from '@/components/stock/StockLevelTable.vue'
 
     const inventory = useInventoryStore()
     const vendorStore = useVendorStore()
     const { levels, loading } = storeToRefs(inventory)
     const { vendors } = storeToRefs(vendorStore)
+    const { isStaff } = storeToRefs(useAuthStore())
 
     const vendorId = ref(null)
 
@@ -48,7 +50,7 @@
     }
 
     onMounted(async () => {
-        if (!vendors.value.length) await vendorStore.load()
+        if (isStaff.value && !vendors.value.length) await vendorStore.load()
         reload()
     })
 </script>

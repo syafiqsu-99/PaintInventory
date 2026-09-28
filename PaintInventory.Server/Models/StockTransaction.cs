@@ -32,5 +32,9 @@ public class StockTransaction
     public string? Notes { get; set; }
     public string? DeviceId { get; set; }
 
+    public DateTime? ReceivedAt { get; set; }
+    public string? ReceivedBy { get; set; }
+    public decimal? ReceivedQty { get; set; }
+
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
 }

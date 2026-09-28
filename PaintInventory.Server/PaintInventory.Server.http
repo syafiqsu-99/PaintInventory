@@ -1,6 +1,31 @@
-@PaintInventory.Server_HostAddress = http://localhost:5016
+@host = https://localhost:7056
 
-GET {{PaintInventory.Server_HostAddress}}/weatherforecast/
-Accept: application/json
+### Sites offered on the login screen
+GET {{host}}/api/auth/sites
 
-###
+### Staff sign-in with the bootstrap code (env var Auth__BootstrapCode)
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{ "vendorId": 0, "accessCode": "{{$processEnv Auth__BootstrapCode}}", "operatorName": "Admin" }
+
+### Current session
+GET {{host}}/api/auth/me
+
+### Issue an access code for a vendor site (staff)
+PUT {{host}}/api/vendors/3/access-code
+Content-Type: application/json
+
+{ "accessCode": null }
+
+### Paint on its way to vendor sites
+GET {{host}}/api/stock/in-transit
+
+### Confirm receipt of a transfer (vendor)
+POST {{host}}/api/stock/receive
+Content-Type: application/json
+
+{ "transactionId": 1, "receivedQty": 5, "batch": "B1", "notes": null, "scanRaw": { "batch": "B/N B1" } }
+
+### Sign out
+POST {{host}}/api/auth/logout

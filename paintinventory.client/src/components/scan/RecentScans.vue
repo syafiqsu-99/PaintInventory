@@ -9,13 +9,13 @@
     <v-list v-if="items.length" lines="two" density="comfortable">
       <v-list-item v-for="(s, i) in items" :key="i">
         <template #prepend>
-          <v-avatar :color="s.direction === 'in' ? 'success' : 'primary'" size="36" variant="tonal">
-            <v-icon :icon="s.direction === 'in' ? 'mdi-tray-arrow-down' : 'mdi-tray-arrow-up'" size="20" />
+          <v-avatar :color="isIn(s) ? 'success' : 'primary'" size="36" variant="tonal">
+            <v-icon :icon="isIn(s) ? 'mdi-tray-arrow-down' : 'mdi-tray-arrow-up'" size="20" />
           </v-avatar>
         </template>
-        <v-list-item-title class="text-body-2 font-weight-medium">{{ s.productName }}</v-list-item-title>
-        <v-list-item-subtitle>
-          {{ s.direction === 'in' ? '+' : '−' }}{{ s.quantity }} · {{ s.vendorName }} · on hand {{ s.onHandQty }}
+        <v-list-item-title class="text-body-1 font-weight-medium text-wrap">{{ s.productName }}</v-list-item-title>
+        <v-list-item-subtitle class="text-body-2">
+          {{ isIn(s) ? '+' : '−' }}{{ s.quantity }} · {{ s.vendorName }} · on hand {{ s.onHandQty }}
         </v-list-item-subtitle>
         <template #append>
           <span class="text-caption text-medium-emphasis">{{ time(s.time) }}</span>
@@ -32,6 +32,8 @@
   defineProps({
     items: { type: Array, default: () => [] }
   })
+
+  const isIn = (s) => s.direction === 'in' || s.direction === 'receive'
 
   function time(d) {
     return new Date(d).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })

@@ -1,10 +1,13 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PaintInventory.Server.Data;
+using PaintInventory.Server.Infrastructure;
 using PaintInventory.Server.Models;
 
 namespace PaintInventory.Server.Controllers;
 
+[Authorize(Policy = AuthConstants.StaffPolicy)]
 [ApiController]
 [Route("api/[controller]")]
 public sealed class DashboardController(PaintInventoryDbContext db) : ControllerBase

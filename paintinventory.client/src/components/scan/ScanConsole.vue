@@ -1,20 +1,20 @@
 <template>
   <div>
     <v-card class="mb-4">
-      <v-card-text class="text-center py-8">
+      <v-card-text class="text-center py-6">
         <v-icon :icon="busy ? 'mdi-magnify-scan' : 'mdi-barcode-scan'"
                 size="72"
                 :color="listening ? 'primary' : 'medium-emphasis'"
                 :class="{ pulse: listening && !busy }" />
         <div class="text-h6 mt-3">{{ statusText }}</div>
-        <div class="text-body-2 text-medium-emphasis mt-1">
+        <div class="text-body-1 text-medium-emphasis mt-1">
           Point the scanner at a paint barcode — the form opens automatically.
         </div>
 
-        <div class="d-flex align-center ga-2 mt-6">
+        <div class="d-flex flex-column flex-sm-row align-stretch align-sm-center ga-2 mt-6">
           <v-text-field ref="scanField"
                         v-model="manual"
-                        label="Scan or type a GTIN, then press Enter"
+                        label="Scan or type GTIN, then Enter"
                         variant="outlined"
                         density="comfortable"
                         hide-details
@@ -35,10 +35,20 @@
       </v-card-text>
     </v-card>
 
+    <IncomingTransfers v-if="!isStaff"
+                       :items="incoming"
+                       :loading="incomingLoading"
+                       @select="openIncoming"
+                       @refresh="loadIncoming" />
+
     <RecentScans :items="recent" />
 
-    <ScanDialog v-model="dialogOpen" :product="resolved" @done="onDone" />
-    <ProductRegisterDialog v-model="registerOpen" :gtin="pendingGtin" @registered="onRegistered" />
+    <ScanDialog v-model="dialogOpen"
+                :product="resolved"
+                :pending="pendingForProduct"
+                :initial-transaction-id="initialTransactionId"
+                @done="onDone" />
+    <ProductRegisterDialog v-if="isStaff" v-model="registerOpen" :gtin="pendingGtin" @registered="onRegistered" />
   </div>
 </template>
 
@@ -49,15 +59,20 @@
     import { useVendorStore } from '@/store/vendor'
     import { useSettingsStore } from '@/store/settings'
     import { useUiStore } from '@/store/ui'
+    import { useAuthStore } from '@/store/auth'
+    import { useStockStore } from '@/store/stock'
     import { useScanner } from '@/composables/useScanner'
     import ProductRegisterDialog from '@/components/products/ProductRegisterDialog.vue'
     import ScanDialog from '@/components/scan/ScanDialog.vue'
     import RecentScans from '@/components/scan/RecentScans.vue'
+    import IncomingTransfers from '@/components/scan/IncomingTransfers.vue'
 
     const products = useProductStore()
     const vendorStore = useVendorStore()
     const settings = useSettingsStore()
     const ui = useUiStore()
+    const stock = useStockStore()
+    const { isStaff } = storeToRefs(useAuthStore())
     const { vendors } = storeToRefs(vendorStore)
     const { prefs } = storeToRefs(settings)
 
@@ -69,6 +84,12 @@
     const registerOpen = ref(false)
     const pendingGtin = ref('')
     const recent = ref([])
+    const incoming = ref([])
+    const incomingLoading = ref(false)
+    const initialTransactionId = ref(null)
+
+    const pendingForProduct = computed(() =>
+      resolved.value ? incoming.value.filter((t) => t.productId === resolved.value.id) : [])
 
     // Hands-free fallback: fires only when focus is NOT in an editable field,
     // so it complements (never double-fires with) the focused input below.
@@ -85,9 +106,33 @@
     })
 
     onMounted(() => {
-      if (!vendors.value.length) vendorStore.load()
+      if (isStaff.value && !vendors.value.length) vendorStore.load()
+      if (!isStaff.value) loadIncoming()
       focusField()
     })
+
+    async function loadIncoming() {
+      incomingLoading.value = true
+      try {
+        incoming.value = await stock.inTransit()
+      } catch (e) {
+        ui.error(e.message)
+      } finally {
+        incomingLoading.value = false
+      }
+    }
+
+    async function openIncoming(transfer) {
+      try {
+        const product = await products.lookup(transfer.gtin)
+        if (!product) return ui.error(`GTIN ${transfer.gtin} is no longer registered.`)
+        initialTransactionId.value = transfer.transactionId
+        resolved.value = product
+        dialogOpen.value = true
+      } catch (e) {
+        ui.error(e.message)
+      }
+    }
 
     function focusField() {
       nextTick(() => scanField.value?.focus())
@@ -106,8 +151,11 @@
       try {
         const product = await products.lookup(gtin)
         if (product) {
+          initialTransactionId.value = null
           resolved.value = product
           dialogOpen.value = true
+        } else if (!isStaff.value) {
+          ui.notify(`GTIN ${gtin} is not registered — ask the paint store to register it.`, 'warning')
         } else {
           pendingGtin.value = gtin
           registerOpen.value = true
@@ -131,6 +179,7 @@
     function onDone(entry) {
       recent.value.unshift(entry)
       if (recent.value.length > 25) recent.value.pop()
+      if (!isStaff.value && entry.direction === 'receive') loadIncoming()
     }
 
     function beep() {

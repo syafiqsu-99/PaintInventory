@@ -18,6 +18,7 @@
                     :items="vendors"
                     :search="search"
                     :loading="loading"
+                    :mobile="xs"
                     density="comfortable"
                     items-per-page="25">
         <template #[`item.isOwnCompany`]="{ item }">
@@ -31,6 +32,9 @@
         </template>
         <template #[`item.doesPainting`]="{ item }">
           <v-icon v-if="item.doesPainting" icon="mdi-check" color="success" size="small" />
+        </template>
+        <template #[`item.hasAccessCode`]="{ item }">
+          <v-icon v-if="item.hasAccessCode" icon="mdi-key-variant" color="primary" size="small" />
         </template>
         <template #[`item.actions`]="{ item }">
           <v-btn size="small" variant="text" icon="mdi-pencil" title="Edit" @click="edit(item)" />
@@ -47,12 +51,15 @@
 
 <script setup>
   import { onMounted, ref } from 'vue'
+  import { useDisplay } from 'vuetify'
   import { storeToRefs } from 'pinia'
   import { useVendorStore } from '@/store/vendor'
   import VendorForm from '@/components/vendors/VendorForm.vue'
 
   const vendorStore = useVendorStore()
   const { vendors, loading } = storeToRefs(vendorStore)
+
+  const { xs } = useDisplay()
 
   const search = ref('')
   const showForm = ref(false)
@@ -64,6 +71,7 @@
     { title: 'Stock', key: 'storesStock', align: 'center' },
     { title: 'Blasting', key: 'doesBlasting', align: 'center' },
     { title: 'Painting', key: 'doesPainting', align: 'center' },
+    { title: 'Access', key: 'hasAccessCode', align: 'center' },
     { title: '', key: 'actions', sortable: false, align: 'end' }
   ]
 

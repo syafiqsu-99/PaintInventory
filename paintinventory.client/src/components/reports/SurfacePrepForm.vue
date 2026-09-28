@@ -13,14 +13,15 @@
     </v-row>
     <EnvironmentFields :model="model" />
     <v-row dense>
-      <v-col cols="6"><v-text-field v-model="model.operator" label="Operator" variant="outlined" density="comfortable" /></v-col>
-      <v-col cols="6"><v-text-field v-model="model.date" label="Date" type="date" variant="outlined" density="comfortable" /></v-col>
+      <v-col cols="12" sm="6"><v-text-field v-model="model.operator" label="Operator" variant="outlined" density="comfortable" /></v-col>
+      <v-col cols="12" sm="6"><ScanDateField v-model="model.date" label="Date" scan-key="surfacePrepDate" /></v-col>
     </v-row>
   </div>
 </template>
 
 <script setup>
   import EnvironmentFields from '@/components/reports/EnvironmentFields.vue'
+  import ScanDateField from '@/components/common/ScanDateField.vue'
 
   defineProps({
       model: { type: Object, required: true }

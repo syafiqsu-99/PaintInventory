@@ -13,11 +13,11 @@
           <v-col cols="12" sm="6">
             <v-select v-model="form.toVendorId" :items="locations" label="To location" :rules="[rules.required, rules.different]" variant="outlined" density="comfortable" />
           </v-col>
-          <v-col cols="6" sm="3">
-            <v-text-field v-model.number="form.quantity" label="Qty (cans)" type="number" :rules="[rules.required, rules.positive]" variant="outlined" density="comfortable" />
+          <v-col cols="12" sm="3">
+            <v-text-field v-model.number="form.quantity" label="Qty (cans)" type="number" inputmode="decimal" :rules="[rules.required, rules.positive]" variant="outlined" density="comfortable" />
           </v-col>
-          <v-col cols="6" sm="3">
-            <v-text-field v-model="form.batch" label="Batch / lot" variant="outlined" density="comfortable" />
+          <v-col cols="12" sm="3">
+            <ScanTextField v-model="form.batch" label="Batch / lot" scan-key="batch" />
           </v-col>
           <v-col cols="12" sm="6">
             <v-text-field v-model="form.notes" label="Notes" variant="outlined" density="comfortable" />
@@ -27,7 +27,7 @@
     </v-card-text>
     <v-card-actions>
       <v-spacer />
-      <v-btn color="primary" :loading="saving" :disabled="!valid" @click="submit">Transfer</v-btn>
+      <v-btn color="primary" size="large" :loading="saving" :disabled="!valid" @click="submit">Transfer</v-btn>
     </v-card-actions>
   </v-card>
 </template>
@@ -39,6 +39,7 @@
   import { useVendorStore } from '@/store/vendor'
   import { useStockStore } from '@/store/stock'
   import { useUiStore } from '@/store/ui'
+  import ScanTextField from '@/components/common/ScanTextField.vue'
 
   const productStore = useProductStore()
   const vendorStore = useVendorStore()
@@ -80,7 +81,10 @@
           const payload = { ...form.value }
           Object.keys(payload).forEach((k) => { if (payload[k] === '') payload[k] = null })
           const result = await stock.transfer(payload)
-          ui.notify(`Transferred ${result.from.quantityApplied * -1} — ${result.from.vendorName}: ${result.from.onHandQty}, ${result.to.vendorName}: ${result.to.onHandQty}.`)
+          const sent = result.from.quantityApplied * -1
+          ui.notify(result.to.quantityApplied === 0
+            ? `Sent ${sent} to ${result.to.vendorName} — in transit until they confirm receipt. ${result.from.vendorName}: ${result.from.onHandQty}.`
+            : `Transferred ${sent} — ${result.from.vendorName}: ${result.from.onHandQty}, ${result.to.vendorName}: ${result.to.onHandQty}.`)
           form.value = blankForm()
         } catch (e) {
           ui.error(e.message)

@@ -19,11 +19,11 @@
           <v-col cols="12" sm="6">
             <v-select v-model="form.vendorId" :items="stockLocations" label="Location" :rules="[rules.required]" variant="outlined" density="comfortable" />
           </v-col>
-          <v-col cols="6" sm="3">
-            <v-text-field v-model.number="form.quantity" label="Qty (cans)" type="number" :rules="[rules.required, rules.positive]" variant="outlined" density="comfortable" />
+          <v-col cols="12" sm="3">
+            <v-text-field v-model.number="form.quantity" label="Qty (cans)" type="number" inputmode="decimal" :rules="[rules.required, rules.positive]" variant="outlined" density="comfortable" />
           </v-col>
-          <v-col cols="6" sm="3">
-            <v-text-field v-model="form.batch" label="Batch / lot" variant="outlined" density="comfortable" />
+          <v-col cols="12" sm="3">
+            <ScanTextField v-model="form.batch" label="Batch / lot" scan-key="batch" />
           </v-col>
           <v-col cols="12">
             <v-text-field v-model="form.notes" label="Notes" variant="outlined" density="comfortable" />
@@ -34,7 +34,7 @@
     <v-card-actions>
       <v-btn variant="text" @click="clear">Clear</v-btn>
       <v-spacer />
-      <v-btn color="primary" :loading="saving" :disabled="!resolved || !valid" @click="submit">Issue stock</v-btn>
+      <v-btn color="primary" size="large" :loading="saving" :disabled="!resolved || !valid" @click="submit">Issue stock</v-btn>
     </v-card-actions>
   </v-card>
 </template>
@@ -47,11 +47,14 @@
   import { useStockStore } from '@/store/stock'
   import { useUiStore } from '@/store/ui'
   import BarcodeScanField from '@/components/common/BarcodeScanField.vue'
+  import ScanTextField from '@/components/common/ScanTextField.vue'
+  import { useScanCapture } from '@/composables/useScanFields'
 
   const products = useProductStore()
   const vendorStore = useVendorStore()
   const stock = useStockStore()
   const ui = useUiStore()
+  const capture = useScanCapture()
   const { vendors } = storeToRefs(vendorStore)
 
   const barcode = ref('')
@@ -78,7 +81,7 @@
       const product = await products.lookup(code)
       if (product) {
         resolved.value = product
-        form.value.shade = product.defaultShade ?? product.ralCode ?? null
+        form.value.shade = product.colour ?? product.ralCode ?? null
       } else {
         resolved.value = null
         ui.error(`GTIN ${code} is not registered. Register it via Stock In first.`)
@@ -89,6 +92,7 @@
       barcode.value = ''
       resolved.value = null
       form.value = blankForm()
+      capture.reset()
   }
 
   async function submit() {
@@ -97,7 +101,7 @@
       try {
         const payload = { productId: resolved.value.id, ...form.value }
         Object.keys(payload).forEach((k) => { if (payload[k] === '') payload[k] = null })
-        const result = await stock.stockOut(payload)
+        const result = await stock.stockOut({ ...payload, scanRaw: capture.payload() })
         ui.notify(`Stock out: ${resolved.value.productName} — on hand ${result.onHandQty}.`)
         clear()
       } catch (e) {

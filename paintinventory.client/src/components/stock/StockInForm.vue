@@ -28,17 +28,17 @@
           <v-col cols="12" sm="6">
             <v-text-field v-model="form.source" label="Source" variant="outlined" density="comfortable" />
           </v-col>
-          <v-col cols="6" sm="3">
-            <v-text-field v-model.number="form.quantity" label="Received qty (cans)" type="number" :rules="[rules.required, rules.positive]" variant="outlined" density="comfortable" />
+          <v-col cols="12" sm="3">
+            <v-text-field v-model.number="form.quantity" label="Received qty (cans)" type="number" inputmode="decimal" :rules="[rules.required, rules.positive]" variant="outlined" density="comfortable" />
           </v-col>
-          <v-col cols="6" sm="3">
-            <v-text-field v-model="form.batch" label="Batch / lot" variant="outlined" density="comfortable" />
+          <v-col cols="12" sm="3">
+            <ScanTextField v-model="form.batch" label="Batch / lot" scan-key="batch" />
           </v-col>
-          <v-col cols="6" sm="3">
-            <v-text-field v-model="form.manufacturingDate" label="Mfg date" type="date" variant="outlined" density="comfortable" />
+          <v-col cols="12" sm="3">
+            <ScanDateField v-model="form.manufacturingDate" label="Mfg date" scan-key="manufacturingDate" />
           </v-col>
-          <v-col cols="6" sm="3">
-            <v-text-field v-model="form.bestBefore" label="Best before" type="date" variant="outlined" density="comfortable" />
+          <v-col cols="12" sm="3">
+            <ScanDateField v-model="form.bestBefore" label="Best before" scan-key="bestBefore" :min="form.manufacturingDate" />
           </v-col>
           <v-col cols="12">
             <v-text-field v-model="form.notes" label="Notes" variant="outlined" density="comfortable" />
@@ -49,7 +49,7 @@
     <v-card-actions>
       <v-btn variant="text" @click="clear">Clear</v-btn>
       <v-spacer />
-      <v-btn color="primary" :loading="saving" :disabled="!resolved || !valid" @click="submit">Add to stock</v-btn>
+      <v-btn color="primary" size="large" :loading="saving" :disabled="!resolved || !valid" @click="submit">Add to stock</v-btn>
     </v-card-actions>
 
     <ProductRegisterDialog v-model="showRegister" :gtin="pendingGtin" @registered="onRegistered" />
@@ -64,12 +64,16 @@
   import { useStockStore } from '@/store/stock'
   import { useUiStore } from '@/store/ui'
   import BarcodeScanField from '@/components/common/BarcodeScanField.vue'
+  import ScanTextField from '@/components/common/ScanTextField.vue'
+  import ScanDateField from '@/components/common/ScanDateField.vue'
+  import { useScanCapture } from '@/composables/useScanFields'
   import ProductRegisterDialog from '@/components/products/ProductRegisterDialog.vue'
 
   const products = useProductStore()
   const vendorStore = useVendorStore()
   const stock = useStockStore()
   const ui = useUiStore()
+  const capture = useScanCapture()
   const { vendors } = storeToRefs(vendorStore)
 
   const barcode = ref('')
@@ -122,6 +126,7 @@
       barcode.value = ''
       resolved.value = null
       form.value = blankForm()
+      capture.reset()
   }
 
   async function submit() {
@@ -130,7 +135,7 @@
       try {
         const payload = { productId: resolved.value.id, ...form.value }
         Object.keys(payload).forEach((k) => { if (payload[k] === '') payload[k] = null })
-        const result = await stock.stockIn(payload)
+        const result = await stock.stockIn({ ...payload, scanRaw: capture.payload() })
         ui.notify(`Stock in: ${resolved.value.productName} — on hand ${result.onHandQty}.`)
         clear()
       } catch (e) {

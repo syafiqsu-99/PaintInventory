@@ -7,7 +7,8 @@ const defaults = {
   expiryWarningDays: 60,
   defaultLocationId: null,
   scanBeep: true,
-  scanDefaultDirection: 'out'
+  scanDefaultDirection: 'out',
+  ocrAssist: true
 }
 
 function load() {

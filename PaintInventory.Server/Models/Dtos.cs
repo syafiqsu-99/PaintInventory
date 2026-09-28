@@ -100,7 +100,8 @@ public record VendorDto(
     bool DoesBlasting,
     bool DoesPainting,
     bool IsActive,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    bool HasAccessCode);
 
 public record StockInRequest(
     [Required] int ProductId,
@@ -114,7 +115,8 @@ public record StockInRequest(
     string? Source,
     string? Operator,
     string? Notes,
-    string? DeviceId);
+    string? DeviceId,
+    Dictionary<string, string>? ScanRaw = null);
 
 public record StockOutRequest(
     [Required] int ProductId,
@@ -125,7 +127,8 @@ public record StockOutRequest(
     int? CoatLineId,
     string? Operator,
     string? Notes,
-    string? DeviceId);
+    string? DeviceId,
+    Dictionary<string, string>? ScanRaw = null);
 
 public record StockAdjustRequest(
     [Required] int ProductId,
@@ -142,6 +145,28 @@ public record StockTransferRequest(
     string? Batch,
     string? Operator,
     string? Notes);
+
+public record StockReceiveRequest(
+    [Required] int TransactionId,
+    decimal ReceivedQty,
+    string? Batch,
+    string? Notes,
+    Dictionary<string, string>? ScanRaw = null);
+
+public record InTransitDto(
+    int TransactionId,
+    int ProductId,
+    string Gtin,
+    string ProductName,
+    ComponentType Component,
+    decimal Quantity,
+    string? Batch,
+    int FromVendorId,
+    string FromVendorName,
+    int ToVendorId,
+    string ToVendorName,
+    string? Operator,
+    DateTime SentAt);
 
 public record StockResult(
     int TransactionId,

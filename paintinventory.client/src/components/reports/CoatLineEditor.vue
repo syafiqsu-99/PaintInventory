@@ -10,8 +10,8 @@
         <v-col cols="12" sm="6">
           <v-select v-model="model.partAProductId" :items="productOptions" label="Part A (paint)" clearable variant="outlined" density="comfortable" />
         </v-col>
-        <v-col cols="6" sm="3">
-          <v-text-field v-model="model.partABatch" label="Part A batch" variant="outlined" density="comfortable" />
+        <v-col cols="12" sm="3">
+          <ScanTextField v-model="model.partABatch" label="Part A batch" scan-key="partABatch" />
         </v-col>
         <v-col cols="6" sm="3">
           <v-text-field v-model="model.shade" label="Shade" variant="outlined" density="comfortable" />
@@ -19,8 +19,8 @@
         <v-col cols="12" sm="6">
           <v-select v-model="model.partBProductId" :items="productOptions" label="Part B (hardener)" clearable variant="outlined" density="comfortable" />
         </v-col>
-        <v-col cols="6" sm="3">
-          <v-text-field v-model="model.partBBatch" label="Part B batch" variant="outlined" density="comfortable" />
+        <v-col cols="12" sm="3">
+          <ScanTextField v-model="model.partBBatch" label="Part B batch" scan-key="partBBatch" />
         </v-col>
         <v-col cols="6" sm="3">
           <v-text-field v-model="model.paintIdText" label="Paint ID (if not listed)" variant="outlined" density="comfortable" />
@@ -34,8 +34,8 @@
         <v-col cols="6" sm="3">
           <v-text-field v-model="model.operator" label="Operator" variant="outlined" density="comfortable" />
         </v-col>
-        <v-col cols="6" sm="3">
-          <v-text-field v-model="model.date" label="Date" type="date" variant="outlined" density="comfortable" />
+        <v-col cols="12" sm="3">
+          <ScanDateField v-model="model.date" label="Date" scan-key="coatDate" />
         </v-col>
       </v-row>
 
@@ -60,6 +60,8 @@
 
 <script setup>
   import EnvironmentFields from '@/components/reports/EnvironmentFields.vue'
+  import ScanTextField from '@/components/common/ScanTextField.vue'
+  import ScanDateField from '@/components/common/ScanDateField.vue'
   import { coatLabel } from '@/utils/reportModel'
 
   defineProps({

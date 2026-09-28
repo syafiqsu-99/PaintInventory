@@ -1,5 +1,11 @@
 const BASE = '/api'
 
+let unauthorizedHandler = null
+
+export function onUnauthorized(handler) {
+  unauthorizedHandler = handler
+}
+
 async function request(path, { method = 'GET', body, signal, headers, isForm = false } = {}) {
   const res = await fetch(`${BASE}${path}`, {
     method,
@@ -10,6 +16,8 @@ async function request(path, { method = 'GET', body, signal, headers, isForm = f
     },
     body: body === undefined ? undefined : isForm ? body : JSON.stringify(body)
   })
+
+  if (res.status === 401 && !path.startsWith('/auth/')) unauthorizedHandler?.()
 
   if (!res.ok) {
     let payload = null

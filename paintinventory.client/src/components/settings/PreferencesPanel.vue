@@ -36,6 +36,12 @@
       </v-btn-toggle>
 
       <v-switch v-model="prefs.scanBeep" label="Beep on scan" color="primary" density="comfortable" hide-details />
+      <v-switch v-model="prefs.ocrAssist"
+                label="Scanner entry for batch & date fields (OCR trial)"
+                color="primary"
+                density="comfortable"
+                hint="Enter from the scanner cleans the read and jumps to the next field; the on-screen keyboard stays hidden until you tap the keyboard icon."
+                persistent-hint />
     </v-card-text>
     <v-divider />
     <v-card-actions>

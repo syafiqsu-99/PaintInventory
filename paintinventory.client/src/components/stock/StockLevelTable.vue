@@ -5,6 +5,7 @@
                   :items="items"
                   :loading="loading"
                   :row-props="rowProps"
+                  :mobile="xs"
                   density="comfortable"
                   items-per-page="25">
       <template #[`item.component`]="{ item }">
@@ -25,12 +26,15 @@
 </template>
 
 <script setup>
+  import { useDisplay } from 'vuetify'
   import { formatNumber } from '@/utils/format'
 
   defineProps({
       items: { type: Array, default: () => [] },
       loading: { type: Boolean, default: false }
   })
+
+  const { xs } = useDisplay()
 
   const headers = [
       { title: 'Product', key: 'productName' },

@@ -58,6 +58,7 @@ public class PaintInventoryDbContext(DbContextOptions<PaintInventoryDbContext> o
         modelBuilder.Entity<Vendor>(e =>
         {
             e.HasIndex(v => v.Name).IsUnique();
+            e.Property(v => v.AccessCodeHash).HasMaxLength(256);
         });
 
         modelBuilder.Entity<StockBalance>(e =>
@@ -83,8 +84,11 @@ public class PaintInventoryDbContext(DbContextOptions<PaintInventoryDbContext> o
             e.HasIndex(t => t.Timestamp);
             e.HasIndex(t => t.PaintProductId);
             e.HasIndex(t => t.VendorId);
+            e.HasIndex(t => new { t.CounterpartyVendorId, t.ReceivedAt });
             e.Property(t => t.Quantity).HasPrecision(18, 2);
             e.Property(t => t.PackVolume).HasPrecision(18, 2);
+            e.Property(t => t.ReceivedQty).HasPrecision(18, 2);
+            e.Property(t => t.ReceivedBy).HasMaxLength(100);
 
             e.HasOne(t => t.PaintProduct)
                 .WithMany(p => p.StockTransactions)
